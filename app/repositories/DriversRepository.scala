@@ -13,7 +13,7 @@ trait DriversRepository {
 
   def update(driver: Driver): Future[Driver]
 
-  def delete(idx: String): Future[Unit]
+  def delete(idx: String): Future[Boolean]
 
   def assignVehicle(driverId: String, vehicle: Vehicle)
 }
