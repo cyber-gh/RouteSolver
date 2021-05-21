@@ -64,4 +64,6 @@ class AppController @Inject()(graphQL: GraphQL, cc: ControllerComponents,
 
     private def parseVariables(variables: String): JsObject = if (variables.trim.isEmpty || variables.trim == "null") Json.obj()
     else Json.parse(variables).as[JsObject]
+
+
 }

@@ -1,15 +1,18 @@
-package repositories
+package repositories.drivers
 
+import com.auth0.json.mgmt.users.User
 import com.google.inject.{Inject, Singleton}
 import database.AppDatabase
 import errors.AmbigousResult
 import models.{Driver, Vehicle}
+import repositories.auth0.Auth0Management
+import slick.lifted.TableQuery
 
 import scala.concurrent.{ExecutionContext, Future}
 
 
 @Singleton
-class DriversRepositoryImpl @Inject()(val database: AppDatabase, implicit val executionContext: ExecutionContext) extends DriversRepository {
+class DriversRepositoryImpl @Inject()(val database: AppDatabase, val auth0Api: Auth0Management, implicit val executionContext: ExecutionContext) extends DriversRepository {
   val profile = database.profile
   /**
    * Specific database profile
@@ -18,16 +21,29 @@ class DriversRepositoryImpl @Inject()(val database: AppDatabase, implicit val ex
   private val vehicleTable = TableQuery[Vehicle.Table]
   private val driversTable = TableQuery[Driver.Table]
 
-  override def create(driver: Driver): Future[Driver] = db.run {
-    Actions.addDriver(driver)
-  }
+  override def create(driver: Driver): Future[Driver] = for {
+    user <- auth0Api.registerDriver(driver.name, driver.email, "Ab123456")
+    driver <- db.run {
+      Actions.addDriver(driver.copy(id = user.getId))
+    }
+  } yield driver
 
   override def find(id: String): Future[Option[Driver]] = db.run {
     Actions.findDriver(id)
   }
 
-  override def getAll: Future[List[Driver]] = db.run {
-    Actions.getAllDrivers
+  override def getAll: Future[List[Driver]] = for {
+    users <- auth0Api.listDrivers
+    drivers <- db.run {
+      Actions.getAllDrivers
+    }
+  } yield combineDetails(users, drivers)
+
+  private def combineDetails(users: List[User], driverDetails: List[Driver]): List[Driver] = {
+    users.map(x => {
+      val d = driverDetails.findLast(_.id == x.getId)
+      Driver(x.getId, x.getName, x.getEmail, d.orNull.vehicleId, d.orNull.supplierId)
+    })
   }
 
   override def update(driver: Driver): Future[Driver] = db.run {
@@ -64,22 +80,17 @@ class DriversRepositoryImpl @Inject()(val database: AppDatabase, implicit val ex
     } yield isDeleted
 
     def addDriver(driver: Driver): DBIO[Driver] = for {
-      idx <- driversTable returning driversTable.map(_.id) += driver
-      maybeDriver <- findDriver(idx)
-      insertedDriver <- maybeDriver match {
-        case Some(value) => DBIO.successful(value)
-        case _ => DBIO.failed(AmbigousResult(s"Unable to save driver [driver=$driver]"))
-      }
+      insertedDriver <- driversTable.insertOrUpdate(driver).map(_ => driver)
     } yield insertedDriver
 
     def insertAndLinkVehicle(driverId: String, vehicle: Vehicle) = for {
-      _ <- vehicleTable returning vehicleTable += vehicle
+      _ <- vehicleTable.insertOrUpdate(vehicle)
       maybeDriver <- findDriver(driverId)
       driver <- maybeDriver match {
         case Some(value) => DBIO.successful(value)
         case _ => DBIO.failed(AmbigousResult("No such driver"))
       }
-      newDriver = Driver(driver.id, driver.firstName, driver.lastName, driver.email, Option(vehicle.id))
+      newDriver = Driver(driver.id, driver.name, driver.email, Option(vehicle.id), driver.supplierId)
       _ <- driversTable.insertOrUpdate(newDriver)
 
     } yield ()

@@ -31,14 +31,12 @@ class DriversSchema @Inject()(driversResolver: DriversResolver) {
             name = "addDriver",
             fieldType = DriverType,
             arguments = List(
-                Argument("firstName", StringType),
-                Argument("lastName", StringType),
+                Argument("name", StringType),
                 Argument("email", StringType)
             ),
             resolve =
                 ctx => driversResolver.addDriver(
-                    ctx.args.arg[String]("firstName"),
-                    ctx.args.arg[String]("lastName"),
+                    ctx.args.arg[String]("name"),
                     ctx.args.arg[String]("email")
                 )
         ),
@@ -48,15 +46,13 @@ class DriversSchema @Inject()(driversResolver: DriversResolver) {
             fieldType = DriverType,
             arguments = List(
                 Argument("id", StringType),
-                Argument("firstName", StringType),
-                Argument("lastName", StringType),
+                Argument("name", StringType),
                 Argument("email", StringType)
             ),
             resolve =
                 ctx => driversResolver.updateDriver(
                     ctx.args.arg[String]("id"),
-                    ctx.args.arg[String]("firstName"),
-                    ctx.args.arg[String]("lastName"),
+                    ctx.args.arg[String]("name"),
                     ctx.args.arg[String]("email")
                 )
         ),

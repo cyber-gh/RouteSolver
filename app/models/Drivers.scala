@@ -4,6 +4,7 @@ package models
 import slick.jdbc.H2Profile.api.{Table => SlickTable, _}
 import slick.lifted.{Tag => SlickTag}
 
+
 case class Vehicle(
                       id: String,
                       licensePlate: String,
@@ -11,14 +12,21 @@ case class Vehicle(
                       fuelConsumption: Double,
                       volumeCapacity: Double,
                       weightCapacity: Double
-                      ) extends Identifiable
+                  ) extends Identifiable
+
+
+case class Supplier(
+                       id: String,
+                       name: String,
+                       email: String
+                   ) extends AppUser
 
 case class Driver(
-                   id: String,
-                   firstName: String,
-                   lastName: String,
-                   email: String,
-                   vehicleId: Option[String]
+                     id: String,
+                     name: String,
+                     email: String,
+                     vehicleId: Option[String],
+                     supplierId: Option[String]
                  ) extends AppUser
 
 
@@ -40,15 +48,18 @@ object Vehicle extends ( (String, String, String, Double, Double, Double) => Veh
 }
 
 
+object Driver extends ((String, String, String, Option[String], Option[String]) => Driver) {
+    class Table(tag: SlickTag) extends SlickTable[Driver](tag, "Drivers") {
+        def * = (id, name, email, vehicleId, supplierId) <> (Driver.tupled, Driver.unapply)
 
-object Driver extends ( (String, String, String, String, Option[String]) => Driver) {
-  class Table(tag: SlickTag) extends SlickTable[Driver](tag, "Drivers") {
-    def id = column[String]("ID", O.PrimaryKey)
-    def firstName = column[String]("first_name")
-    def lastName = column[String]("last_name")
-    def email = column[String]("email")
-    def vehicleId = column[Option[String]]("vehicle_id")
+        def id = column[String]("ID", O.PrimaryKey)
 
-    def * = (id, firstName, lastName, email, vehicleId) <> (Driver.tupled, Driver.unapply)
-  }
+        def email = column[String]("email")
+
+        def vehicleId = column[Option[String]]("vehicle_id")
+
+        def name = column[String]("name")
+
+        def supplierId = column[Option[String]]("supplier_id")
+    }
 }

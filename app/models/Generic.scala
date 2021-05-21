@@ -6,7 +6,7 @@ trait Identifiable {
 }
 
 trait AppUser extends  Identifiable {
-  def firstName: String
-  def lastName: String
-  def email: String
+    def name: String
+
+    def email: String
 }

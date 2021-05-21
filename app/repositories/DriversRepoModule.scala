@@ -1,6 +1,7 @@
 package repositories
 
 import com.google.inject.{AbstractModule, Scopes}
+import repositories.drivers.{DriversRepository, DriversRepositoryImpl}
 
 class DriversRepoModule extends AbstractModule{
   override def configure(): Unit = {
