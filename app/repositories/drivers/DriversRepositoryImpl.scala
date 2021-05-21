@@ -22,7 +22,7 @@ class DriversRepositoryImpl @Inject()(val database: AppDatabase, val auth0Api: A
   private val driversTable = TableQuery[Driver.Table]
 
   override def create(driver: Driver): Future[Driver] = for {
-    user <- auth0Api.registerDriver(driver.name, driver.email, "Ab123456")
+    user <- auth0Api.registerDriver(driver.name, driver.email)
     driver <- db.run {
       Actions.addDriver(driver.copy(id = user.getId))
     }

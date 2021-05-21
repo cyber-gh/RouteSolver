@@ -7,5 +7,5 @@ import scala.concurrent.Future
 trait Auth0Management {
     def listDrivers: Future[List[User]]
 
-    def registerDriver(name: String, email: String, pwd: String): Future[User]
+    def registerDriver(name: String, email: String): Future[User]
 }

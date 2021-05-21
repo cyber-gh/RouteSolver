@@ -46,17 +46,16 @@ class Auth0ManagementImpl @Inject()(implicit val executionContext: ExecutionCont
 
     private def driverRoleId: String = "rol_iT25htSYLou59w6P"
 
-    override def registerDriver(name: String, email: String, pwd: String): Future[User] = for {
+    override def registerDriver(name: String, email: String): Future[User] = for {
         api <- getApi
-        user <- api.users().create(buildUser(name, email, pwd)).executeAsync().asScala
+        user <- api.users().create(buildUser(name, email)).executeAsync().asScala
         _ <- api.roles().assignUsers(driverRoleId, List(user.getId).asJava).executeAsync().asScala
     } yield user
 
-    private def buildUser(name: String, email: String, pwd: String): User = {
-        val user = new User(usersConnection)
+    private def buildUser(name: String, email: String): User = {
+        val user = new User("email")
         user.setName(name)
         user.setEmail(email)
-        user.setPassword(pwd.toCharArray)
         return user
     }
 }
