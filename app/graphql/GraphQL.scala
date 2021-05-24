@@ -1,6 +1,8 @@
 package graphql
 
+import graphql.middleware.{AuthorizationException, UserDetails}
 import graphql.schemas.DriversSchema
+import sangria.execution.{HandledException, ExceptionHandler => EHandler}
 import sangria.schema.{ObjectType, fields}
 
 import javax.inject.Inject
@@ -17,4 +19,11 @@ class GraphQL @Inject()(driversSchema: DriversSchema) {
         )
     )
 
+    val ErrorHandler = EHandler {
+        case (_, AuthorizationException(message)) ⇒ HandledException(message)
+    }
+}
+
+case class MyContext(val userDetails: UserDetails) {
+    def hasPermission(permission: String): Boolean = userDetails.userPermissions.contains(permission)
 }

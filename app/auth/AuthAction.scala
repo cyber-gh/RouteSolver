@@ -9,11 +9,11 @@ import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
+
 // A custom request type to hold our JWT claims, we can pass these on to the
 // handling action
 case class UserRequest[A](jwt: JwtClaim, token: String, request: Request[A]) extends WrappedRequest[A](request)
 
-// Our custom action implementation
 class AuthAction @Inject()(bodyParser: BodyParsers.Default, authService: AuthService)(implicit ec: ExecutionContext)
     extends ActionBuilder[UserRequest, AnyContent] {
 

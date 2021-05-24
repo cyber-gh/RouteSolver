@@ -1,7 +1,7 @@
 package models
 
 
-import slick.jdbc.H2Profile.api.{Table => SlickTable, _}
+import slick.jdbc.MySQLProfile.api.{Table => SlickTable, _}
 import slick.lifted.{Tag => SlickTag}
 
 

@@ -53,9 +53,10 @@ class Auth0ManagementImpl @Inject()(implicit val executionContext: ExecutionCont
     } yield user
 
     private def buildUser(name: String, email: String): User = {
-        val user = new User("email")
+        val user = new User(usersConnection)
         user.setName(name)
         user.setEmail(email)
+        user.setPassword("Ab123456".toCharArray)
         return user
     }
 }
