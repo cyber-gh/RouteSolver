@@ -17,9 +17,5 @@ class DriversResolver @Inject() (driversRepository: DriversRepository, implicit 
 
     def findDriver(idx: String): Future[Option[Driver]] = driversRepository.find(idx)
 
-    def updateDriver(idx: String, name: String, email: String): Future[Driver] = driversRepository.update(
-        Driver(idx, name = name, email = email, null, null)
-    )
-
     def deleteDriver(idx: String): Future[Boolean] = driversRepository.delete(idx)
 }

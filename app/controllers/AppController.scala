@@ -1,5 +1,6 @@
 package controllers
 
+import auth.AuthAction
 import com.google.inject.Inject
 import graphql.GraphQL
 import play.api.libs.json._
@@ -12,7 +13,7 @@ import sangria.parser.QueryParser
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-class AppController @Inject()(graphQL: GraphQL, cc: ControllerComponents,
+class AppController @Inject()(graphQL: GraphQL, cc: ControllerComponents, authAction: AuthAction,
                               implicit val executionContext: ExecutionContext) extends AbstractController(cc) {
 
     def graphiql = Action(Ok(views.html.graphiql()))
@@ -50,20 +51,24 @@ class AppController @Inject()(graphQL: GraphQL, cc: ControllerComponents,
         }
     }
 
+    def ping = authAction { implicit request =>
+        Ok("Hello, Scala!")
+    }
+
+    private def parseVariables(variables: String): JsObject = if (variables.trim.isEmpty || variables.trim == "null") Json.obj()
+    else Json.parse(variables).as[JsObject]
+
     private def executeQuery(query: String, variables: Option[JsObject] = None, operation: Option[String] = None): Future[Result] = QueryParser.parse(query) match {
         case Success(queryAst: Document) => Executor.execute(
             schema = graphQL.Schema,
             queryAst = queryAst,
-            variables = variables.getOrElse(Json.obj())
+            variables = variables.getOrElse(Json.obj()),
+            userContext = "123"
         ).map(Ok(_)).recover {
             case error: QueryAnalysisError => BadRequest(error.resolveError)
             case error: ErrorWithResolver => InternalServerError(error.resolveError)
         }
         case Failure(exception) => Future(BadRequest(s"${exception.getMessage}"))
     }
-
-    private def parseVariables(variables: String): JsObject = if (variables.trim.isEmpty || variables.trim == "null") Json.obj()
-    else Json.parse(variables).as[JsObject]
-
 
 }

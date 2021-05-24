@@ -42,22 +42,6 @@ class DriversSchema @Inject()(driversResolver: DriversResolver) {
         ),
 
         Field(
-            name = "updateDriver",
-            fieldType = DriverType,
-            arguments = List(
-                Argument("id", StringType),
-                Argument("name", StringType),
-                Argument("email", StringType)
-            ),
-            resolve =
-                ctx => driversResolver.updateDriver(
-                    ctx.args.arg[String]("id"),
-                    ctx.args.arg[String]("name"),
-                    ctx.args.arg[String]("email")
-                )
-        ),
-
-        Field(
             name = "deleteDriver",
             fieldType = BooleanType,
             arguments = List(
