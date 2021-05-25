@@ -81,12 +81,19 @@ class AppController @Inject()(graphQL: GraphQL, cc: ControllerComponents, authSe
             userContext = MyContext(userDetails),
             middleware = AuthMiddleware :: Nil,
             exceptionHandler = graphQL.ErrorHandler
-        ).map(Ok(_)).recover {
+        )
+            .map(x => if (hasErrors(x)) Results.Unauthorized(x) else Ok(x)).recover {
             case error: QueryAnalysisError => BadRequest(error.resolveError)
             case error: AuthorizationException => BadRequest(error.message)
             case error: ErrorWithResolver => InternalServerError(error.resolveError)
         }
         case Failure(exception) => Future(BadRequest(s"${exception.getMessage}"))
+    }
+
+    private def hasErrors(js: JsValue): Boolean = {
+        val t = js \ "errors" \ 0 \ "message"
+        val msg = t.asOpt[String].getOrElse("")
+        return msg == "You don't have the required permissions"
     }
 
     private def permissions(claim: JwtClaim): List[String] = (Json.parse(claim.content) \ "permissions").asOpt[List[String]].getOrElse(List())
