@@ -11,6 +11,8 @@ trait DriversRepository {
 
     def getAll: Future[List[Driver]]
 
+    def getAllBySupplier(supplierId: String): Future[List[Driver]]
+
     def delete(idx: String): Future[Boolean]
 
     def assignVehicle(driverId: String, vehicle: Vehicle)

@@ -13,13 +13,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class DriversRepositoryImpl @Inject()(val database: AppDatabase, val auth0Api: Auth0Management, implicit val executionContext: ExecutionContext) extends DriversRepository {
-    val profile = database.profile
-    /**
-     * Specific database profile
-     */
-    private val db = database.db
-    private val vehicleTable = TableQuery[Vehicle.Table]
-    private val driversTable = TableQuery[Driver.Table]
+
 
     override def create(driver: Driver): Future[Driver] = for {
         user <- auth0Api.registerDriver(driver.name, driver.email)
@@ -31,6 +25,8 @@ class DriversRepositoryImpl @Inject()(val database: AppDatabase, val auth0Api: A
     override def find(id: String): Future[Option[Driver]] = db.run {
         Actions.findDriver(id)
     }
+
+    val profile = database.profile
 
     override def getAll: Future[List[Driver]] = for {
         users <- auth0Api.listDrivers
@@ -46,6 +42,20 @@ class DriversRepositoryImpl @Inject()(val database: AppDatabase, val auth0Api: A
         })
     }
 
+    /**
+     * Specific database profile
+     */
+    private val db = database.db
+    private val vehicleTable = TableQuery[Vehicle.Table]
+    private val driversTable = TableQuery[Driver.Table]
+
+    override def getAllBySupplier(supplierId: String): Future[List[Driver]] = for {
+        users <- auth0Api.listDrivers
+        drivers <- db.run {
+            Actions.getDriversBySupplier(supplierId)
+        }
+    } yield combineDetails(users, drivers)
+
     import profile.api._
 
     override def delete(idx: String): Future[Boolean] = db.run {
@@ -60,6 +70,10 @@ class DriversRepositoryImpl @Inject()(val database: AppDatabase, val auth0Api: A
 
         def findVehicle(id: String): DBIO[Option[Vehicle]] = vehicleTable.filter(_.id === id)
             .result.headOption
+
+        def getDriversBySupplier(suppliedId: String): DBIO[List[Driver]] = for {
+            drivers <- driversTable.filter(_.supplierId === suppliedId).result
+        } yield drivers.toList
 
         def getAllDrivers: DBIO[List[Driver]] = for {
             drivers <- driversTable.result

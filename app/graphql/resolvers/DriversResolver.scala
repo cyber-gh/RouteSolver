@@ -9,10 +9,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class DriversResolver @Inject() (driversRepository: DriversRepository, implicit val executionContext: ExecutionContext) {
 
-    def drivers: Future[List[Driver]] = driversRepository.getAll
+    def drivers(supplierId: String): Future[List[Driver]] = driversRepository.getAllBySupplier(supplierId)
 
-    def addDriver(name: String, email: String): Future[Driver] = driversRepository.create(
-        Driver(UUID.randomUUID().toString, name = name, email = email, null, null)
+    def addDriver(name: String, email: String, supplierId: String): Future[Driver] = driversRepository.create(
+        Driver(UUID.randomUUID().toString, name = name, email = email, vehicleId = null, supplierId = Option(supplierId))
     )
 
     def findDriver(idx: String): Future[Option[Driver]] = driversRepository.find(idx)

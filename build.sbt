@@ -40,6 +40,11 @@ libraryDependencies ++= Seq(
     "com.auth0" % "auth0" % "1.31.0"
 )
 
+libraryDependencies ++= Seq(
+    "com.google.maps" % "google-maps-services" % "0.18.1"
+
+)
+
 unmanagedResourceDirectories in Test <+= baseDirectory(_ / "target/web/public/test")
 
       

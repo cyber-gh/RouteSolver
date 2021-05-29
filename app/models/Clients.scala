@@ -8,13 +8,15 @@ case class DeliveryClient(
                              name: String,
                              email: String,
                              address: String,
-                             latitude: Double,
-                             longitude: Double
+                             latitude: Option[Double],
+                             longitude: Option[Double],
+
+                             supplierId: Option[String]
                          ) extends AppUser
 
-object DeliveryClient extends ((String, String, String, String, Double, Double) => DeliveryClient) {
+object DeliveryClient extends ((String, String, String, String, Option[Double], Option[Double], Option[String]) => DeliveryClient) {
     class Table(tag: SlickTag) extends SlickTable[DeliveryClient](tag, "Clients") {
-        def * = (id, email, name, address, latitude, longitude) <> (DeliveryClient.tupled, DeliveryClient.unapply)
+        def * = (id, email, name, address, latitude, longitude, supplierId) <> (DeliveryClient.tupled, DeliveryClient.unapply)
 
         def id = column[String]("id", O.PrimaryKey)
 
@@ -24,8 +26,10 @@ object DeliveryClient extends ((String, String, String, String, Double, Double) 
 
         def address = column[String]("address")
 
-        def latitude = column[Double]("latitude")
+        def latitude = column[Option[Double]]("latitude")
 
-        def longitude = column[Double]("longitude")
+        def longitude = column[Option[Double]]("longitude")
+
+        def supplierId = column[Option[String]]("supplier_id")
     }
 }
