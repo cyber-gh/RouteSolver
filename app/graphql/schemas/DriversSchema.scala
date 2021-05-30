@@ -12,7 +12,7 @@ class DriversSchema @Inject()(driversResolver: DriversResolver, clientsResolver:
 
     implicit val DriverType: ObjectType[Unit, Driver] = deriveObjectType[Unit, Driver](ObjectTypeName("Driver"))
     implicit val DeliveryClientType: ObjectType[Unit, DeliveryClient] = deriveObjectType[Unit, DeliveryClient](ObjectTypeName("DeliveryClient"))
-    val Queries: List[Field[MyContext, Unit]] = ClientsQueries ++ DriversQueries
+
     val DriversMutations: List[Field[MyContext, Unit]] = List(
         Field(
             name = "addDriver",
@@ -69,7 +69,7 @@ class DriversSchema @Inject()(driversResolver: DriversResolver, clientsResolver:
             )
         )
     )
-    val Mutations: List[Field[MyContext, Unit]] = DriversMutations ++ ClientsMutations
+
     private val ClientsQueries: List[Field[MyContext, Unit]] = List(
         Field(
             name = "clients",
@@ -94,4 +94,7 @@ class DriversSchema @Inject()(driversResolver: DriversResolver, clientsResolver:
                 sangriaContext => driversResolver.findDriver(sangriaContext.args.arg[String]("id"))
         )
     )
+
+    val Queries: List[Field[MyContext, Unit]] = ClientsQueries ++ DriversQueries
+    val Mutations: List[Field[MyContext, Unit]] = DriversMutations ++ ClientsMutations
 }
