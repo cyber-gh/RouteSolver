@@ -25,7 +25,7 @@ class Auth0ManagementImpl @Inject()(implicit val executionContext: ExecutionCont
     } yield drivers
 
     private def getApi: Future[ManagementAPI] = api match {
-        case Some(value) => return Future.successful(value)
+        case Some(value) => Future.successful(value)
         case None =>
             buildMgmt().map(
                 x => {

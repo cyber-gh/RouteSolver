@@ -36,7 +36,7 @@ class DBModule extends AbstractModule {
 
       override def profile = config.profile
     }
-    return db
+    db
   }
 }
 

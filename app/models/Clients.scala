@@ -7,16 +7,16 @@ case class DeliveryClient(
                              id: String,
                              name: String,
                              email: String,
-                             address: String,
-                             latitude: Option[Double],
-                             longitude: Option[Double],
+                             locationId: String,
 
                              supplierId: Option[String]
                          ) extends AppUser
 
-object DeliveryClient extends ((String, String, String, String, Option[Double], Option[Double], Option[String]) => DeliveryClient) {
+object DeliveryClient extends ((String, String, String, String, Option[String]) => DeliveryClient) {
     class Table(tag: SlickTag) extends SlickTable[DeliveryClient](tag, "Clients") {
-        def * = (id, email, name, address, latitude, longitude, supplierId) <> (DeliveryClient.tupled, DeliveryClient.unapply)
+        private val locations = TableQuery[Location.Table]
+
+        def * = (id, email, name, locationId, supplierId) <> (DeliveryClient.tupled, DeliveryClient.unapply)
 
         def id = column[String]("id", O.PrimaryKey)
 
@@ -24,12 +24,10 @@ object DeliveryClient extends ((String, String, String, String, Option[Double], 
 
         def name = column[String]("name")
 
-        def address = column[String]("address")
-
-        def latitude = column[Option[Double]]("latitude")
-
-        def longitude = column[Option[Double]]("longitude")
+        def locationId = column[String]("location_id")
 
         def supplierId = column[Option[String]]("supplier_id")
+
+        def location = foreignKey("location", locationId, locations)(_.address)
     }
 }

@@ -3,33 +3,6 @@ package models
 import slick.jdbc.MySQLProfile.api.{Table => SlickTable, _}
 import slick.lifted.{Tag => SlickTag}
 
-case class Location(
-                       address: String,
-                       latitude: Double,
-                       longitude: Double)
-
-case class DeliveryRoute(
-                            id: String,
-
-                            startLocation: Location,
-                            orders: List[DeliveryOrder],
-
-                            roundTrip: Boolean
-                        ) extends Identifiable
-
-
-case class DeliveryOrder(
-                            id: String,
-
-                            location: Location,
-
-                            startTime: Option[String],
-                            endTime: Option[String],
-
-                            weight: Option[Double],
-                            volume: Option[Double]
-
-                        ) extends Identifiable
 
 case class DeliveryOrderModel(
                                  id: String,
@@ -48,33 +21,25 @@ case class DeliveryOrderModel(
 case class DeliveryRouteModel(
                                  id: String,
                                  supplierId: String,
+                                 name: String,
                                  startLocationId: String,
 
                                  roundTrip: Boolean
                              ) extends Identifiable
 
-object Location extends ((String, Double, Double) => Location) {
-    class Table(tag: SlickTag) extends SlickTable[Location](tag, "Locations") {
-        def * = (address, latitude, longitude) <> (Location.tupled, Location.unapply)
 
-        def address = column[String]("address", O.PrimaryKey)
-
-        def latitude = column[Double]("latitude")
-
-        def longitude = column[Double]("longitude")
-    }
-}
-
-object DeliveryRouteModel extends ((String, String, String, Boolean) => DeliveryRouteModel) {
+object DeliveryRouteModel extends ((String, String, String, String, Boolean) => DeliveryRouteModel) {
     class Table(tag: SlickTag) extends SlickTable[DeliveryRouteModel](tag, "Routes") {
         lazy val locations = TableQuery[Location.Table]
         lazy val suppliers = TableQuery[Supplier.Table]
 
-        def * = (id, supplierId, startLocationId, roundTrip) <> (DeliveryRouteModel.tupled, DeliveryRouteModel.unapply)
+        def * = (id, supplierId, name, startLocationId, roundTrip) <> (DeliveryRouteModel.tupled, DeliveryRouteModel.unapply)
 
         def id = column[String]("id", O.PrimaryKey)
 
         def supplierId = column[String]("supplier_id")
+
+        def name = column[String]("name")
 
         def startLocationId = column[String]("start_location_id")
 

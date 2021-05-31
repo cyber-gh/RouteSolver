@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import database.AppDatabase
 import models.DeliveryClient
 import repositories.geocoding.GeocodingRepository
+import repositories.routes.LocationRepository
 import slick.lifted.TableQuery
 
 import java.util.UUID
@@ -11,6 +12,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class ClientsRepositoryImpl @Inject()(val database: AppDatabase,
                                       val geocoding: GeocodingRepository,
+                                      val locationRepository: LocationRepository,
                                       implicit val executionContext: ExecutionContext) extends ClientsRepository {
 
     val profile = database.profile
@@ -21,19 +23,18 @@ class ClientsRepositoryImpl @Inject()(val database: AppDatabase,
     private val clientsTable = TableQuery[DeliveryClient.Table]
 
     override def create(name: String, email: String, address: String, supplierId: String): Future[DeliveryClient] = for {
-        (lat, lng) <- geocoding.geocode(address)
-        client <- db.run {
-            Actions.addClient(
-                DeliveryClient(UUID.randomUUID().toString, name, email, address = address, latitude = Some(lat), longitude = Some(lng), supplierId = Some(supplierId))
-            )
+        location <- locationRepository.getLocation(address)
+        client = DeliveryClient(UUID.randomUUID().toString, name, email, locationId = location.address, supplierId = Some(supplierId))
+        insertedClient <- db.run {
+            Actions.addClient(client)
         }
-    } yield client
+    } yield insertedClient
 
     override def create(name: String, email: String, lat: Double, lng: Double, supplierId: String): Future[DeliveryClient] = for {
-        address <- geocoding.revGeocode(lat, lng)
+        location <- locationRepository.getLocation(lat, lng)
         client <- db.run {
             Actions.addClient(
-                DeliveryClient(UUID.randomUUID().toString, name, email, address = address, latitude = Some(lat), longitude = Some(lng), supplierId = Some(supplierId))
+                DeliveryClient(UUID.randomUUID().toString, name, email, locationId = location.address, supplierId = Some(supplierId))
             )
         }
     } yield client
@@ -51,7 +52,7 @@ class ClientsRepositoryImpl @Inject()(val database: AppDatabase,
     object Actions {
         def addClient(client: DeliveryClient): DBIO[DeliveryClient] = for {
             insertedClient <- clientsTable.insertOrUpdate(client).map(_ => client)
-        } yield client
+        } yield insertedClient
 
         def getClients(supplierId: String): DBIO[List[DeliveryClient]] = for {
             clients <- clientsTable.filter(_.supplierId === supplierId).result

@@ -20,6 +20,8 @@ import scala.util.{Failure, Success, Try}
 class AppController @Inject()(graphQL: GraphQL, cc: ControllerComponents, authService: AuthService, authAction: AuthAction,
                               implicit val executionContext: ExecutionContext) extends AbstractController(cc) {
 
+    private val authEnabled: Boolean = true
+
     def graphiql = Action(Ok(views.html.graphiql()))
 
     private val headerTokenRegex = """Bearer (.+?)""".r
@@ -59,6 +61,7 @@ class AppController @Inject()(graphQL: GraphQL, cc: ControllerComponents, authSe
                     case Failure(t) => Future.successful(Results.Unauthorized(t.getMessage)) // token was invalid - return 401
                 }
             } getOrElse Future.successful(Results.Unauthorized)
+
 
         }
     }

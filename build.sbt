@@ -27,7 +27,8 @@ libraryDependencies ++= Seq(
     "com.typesafe.slick" %% "slick" % "3.3.3",
     "com.typesafe.slick" %% "slick-hikaricp" % "3.3.3",
 
-    "io.spray" %% "spray-json" % "1.3.5"
+    "io.spray" %% "spray-json" % "1.3.5",
+    "org.sangria-graphql" %% "sangria-spray-json" % "1.0.2"
 
 )
 
