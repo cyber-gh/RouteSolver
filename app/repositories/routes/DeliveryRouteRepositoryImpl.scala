@@ -1,5 +1,6 @@
 package repositories.routes
 
+import akka.http.scaladsl.model.DateTime
 import com.google.inject.Inject
 import database.AppDatabase
 import models.{DeliveryOrderModel, DeliveryRouteModel, Location}
@@ -39,7 +40,7 @@ class DeliveryRouteRepositoryImpl @Inject()(
         location <- getLocation(startAddress)
         route <- db.run {
             Actions.addRoute(
-                DeliveryRouteModel(UUID.randomUUID().toString, supplierId = supplierId, name = name, startLocationId = startAddress, roundTrip = roundTrip),
+                DeliveryRouteModel(UUID.randomUUID().toString, supplierId = supplierId, name = name, startLocationId = startAddress, startTime = DateTime.now, roundTrip = roundTrip),
                 location
             )
         }

@@ -1,10 +1,12 @@
 package graphql.schemas
 
+import akka.http.scaladsl.model.DateTime
 import com.google.inject.Inject
 import graphql.MyContext
 import graphql.middleware.AuthPermission
 import graphql.resolvers.{ClientsResolver, DeliveryResolver, DriversResolver}
 import models._
+import sangria.ast.StringValue
 import sangria.macros.derive._
 import sangria.schema.{ObjectType, _}
 import spray.json.DefaultJsonProtocol._
@@ -13,8 +15,19 @@ class DriversSchema @Inject()(
                                  driversResolver: DriversResolver,
                                  clientsResolver: ClientsResolver,
                                  deliveryResolver: DeliveryResolver) {
-    val Queries: List[Field[MyContext, Unit]] = ClientsQueries ++ DriversQueries ++ DeliveryQueries
-    val Mutations: List[Field[MyContext, Unit]] = DriversMutations ++ ClientsMutations ++ DeliveryMutations
+
+    implicit val GraphQLDateTime = ScalarType[DateTime]( //1
+        "DateTime", //2
+        coerceOutput = (dt, _) => dt.toString, //3
+        coerceInput = { //4
+            case StringValue(dt, _, _, _, _) => DateTime.fromIsoDateTimeString(dt).toRight(DateTimeCoerceViolation)
+            case _ => Left(DateTimeCoerceViolation)
+        },
+        coerceUserInput = { //5
+            case s: String => DateTime.fromIsoDateTimeString(s).toRight(DateTimeCoerceViolation)
+            case _ => Left(DateTimeCoerceViolation)
+        }
+    )
 
     implicit lazy val DriverType: ObjectType[Unit, Driver] = deriveObjectType[Unit, Driver](
         Interfaces(IdentifiableType),
@@ -48,6 +61,9 @@ class DriversSchema @Inject()(
         ),
         ReplaceField("startLocationId",
             Field("startLocation", LocationType, resolve = it => deliveryResolver.getLocation(it.value.startLocationId))
+        ),
+        ReplaceField("startTime",
+            Field("startTime", GraphQLDateTime, resolve = _.value.startTime)
         ),
         ExcludeFields("supplierId")
     )
@@ -205,5 +221,9 @@ class DriversSchema @Inject()(
             resolve = ctx => deliveryResolver.getRoute(ctx.arg(Id))
         )
     )
+
+
+    val Queries: List[Field[MyContext, Unit]] = ClientsQueries ++ DriversQueries ++ DeliveryQueries
+    val Mutations: List[Field[MyContext, Unit]] = DriversMutations ++ ClientsMutations ++ DeliveryMutations
 
 }

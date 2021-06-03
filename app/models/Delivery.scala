@@ -1,7 +1,10 @@
 package models
 
+import akka.http.scaladsl.model.DateTime
 import slick.jdbc.MySQLProfile.api.{Table => SlickTable, _}
 import slick.lifted.{Tag => SlickTag}
+
+import java.sql.Timestamp
 
 
 case class DeliveryOrderModel(
@@ -23,17 +26,24 @@ case class DeliveryRouteModel(
                                  supplierId: String,
                                  name: String,
                                  startLocationId: String,
+                                 startTime: DateTime,
 
                                  roundTrip: Boolean
                              ) extends Identifiable
 
 
-object DeliveryRouteModel extends ((String, String, String, String, Boolean) => DeliveryRouteModel) {
+object DeliveryRouteModel extends ((String, String, String, String, DateTime, Boolean) => DeliveryRouteModel) {
+
+    private implicit val dateTimeColumnType = MappedColumnType.base[DateTime, Timestamp](
+        dt => new Timestamp(dt.clicks),
+        ts => DateTime(ts.getTime)
+    )
+
     class Table(tag: SlickTag) extends SlickTable[DeliveryRouteModel](tag, "Routes") {
         lazy val locations = TableQuery[Location.Table]
         lazy val suppliers = TableQuery[Supplier.Table]
 
-        def * = (id, supplierId, name, startLocationId, roundTrip) <> (DeliveryRouteModel.tupled, DeliveryRouteModel.unapply)
+        def * = (id, supplierId, name, startLocationId, startTime, roundTrip) <> (DeliveryRouteModel.tupled, DeliveryRouteModel.unapply)
 
         def id = column[String]("id", O.PrimaryKey)
 
@@ -42,6 +52,8 @@ object DeliveryRouteModel extends ((String, String, String, String, Boolean) => 
         def name = column[String]("name")
 
         def startLocationId = column[String]("start_location_id")
+
+        def startTime = column[DateTime]("start_time")
 
         def roundTrip = column[Boolean]("round_trip")
 
@@ -80,4 +92,11 @@ object DeliveryOrderModel extends ((String, String, String, Option[String], Opti
 }
 
 
+object DateMapper {
 
+    //    val dateTimeColumnType = MappedColumnType.base[DateTime, Timestamp](
+    //        dt => new Timestamp(dt.clicks),
+    //        ts => DateTime(ts.getTime)
+    //    )
+
+}
