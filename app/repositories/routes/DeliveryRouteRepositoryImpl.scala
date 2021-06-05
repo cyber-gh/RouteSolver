@@ -28,6 +28,9 @@ class DeliveryRouteRepositoryImpl @Inject()(
         Actions.getRoutes(supplierId)
     }
 
+    override def getLocations(addresses: List[String]): Future[List[Location]] =
+        Future.sequence(addresses.map(x => getLocation(x)))
+
     override def getLocation(lat: Double, lng: Double): Future[Location] = for {
         address <- geocoding.revGeocode(lat, lng)
         location = Location(address, lat, lng)
@@ -91,6 +94,10 @@ class DeliveryRouteRepositoryImpl @Inject()(
         Actions.getOrders(routeId)
     }
 
+    override def getOrder(orderId: String): Future[Option[DeliveryOrderModel]] = db.run {
+        Actions.getOrder(orderId)
+    }
+
     import profile.api._
 
     object Actions {
@@ -116,6 +123,8 @@ class DeliveryRouteRepositoryImpl @Inject()(
             order = DeliveryOrderModel(UUID.randomUUID().toString, routeId, locationId, None, None, None, None)
             _ <- ordersTable.insertOrUpdate(order)
         } yield order
+
+        def getOrder(orderId: String): DBIO[Option[DeliveryOrderModel]] = ordersTable.filter(_.id === orderId).result.headOption
 
         def deleteRoute(routeId: String): DBIO[Boolean] = for {
             maybeDeleted <- routesTable.filter(_.id === routeId).delete

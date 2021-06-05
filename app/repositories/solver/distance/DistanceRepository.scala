@@ -1,4 +1,4 @@
-package repositories.optimizer
+package repositories.solver.distance
 
 import models.Location
 

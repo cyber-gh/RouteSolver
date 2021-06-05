@@ -1,8 +1,9 @@
-package repositories.optimizer
+package repositories.solver.optimizer
 
 import com.google.inject.Inject
 import models.Location
-import repositories.optimizer.utility.DeliveryOrder
+import repositories.solver.distance.DistanceRepository
+import repositories.solver.utility.{DeliveryOrder, OptimizeSolution}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -23,7 +24,7 @@ class BacktrackOptimizer(val distanceMatrix: Array[Array[Double]], val nr: Int) 
 }
 
 class BasicRouteOptimizer @Inject()(distanceRepository: DistanceRepository, implicit val executionContext: ExecutionContext) extends RouteOptimizer {
-    override def optimize(start: Location, orders: List[DeliveryOrder]): Future[List[(DeliveryOrder, Int)]] = {
+    override def optimize(start: Location, orders: List[DeliveryOrder]): Future[OptimizeSolution] = {
         val locations = List(start) ++ orders.map(_.location)
         return for {
             distanceMatrix <- distanceRepository.getDistanceMatrix(locations)
@@ -31,7 +32,8 @@ class BasicRouteOptimizer @Inject()(distanceRepository: DistanceRepository, impl
             (ans, cost) = optimizer.run()
             finalOrders = ans.drop(1).zipWithIndex.map { case (o, idx) => (orders(o - 1), idx) }
             sortedOrders = finalOrders.sortBy { case (order, idx) => idx }
-        } yield (sortedOrders)
+            sol = OptimizeSolution(sortedOrders, cost)
+        } yield sol
     }
 }
 

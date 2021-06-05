@@ -1,4 +1,4 @@
-package repositories.optimizer.utility
+package repositories.solver.utility
 
 import models.{Identifiable, Location}
 

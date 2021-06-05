@@ -4,7 +4,7 @@ import akka.http.scaladsl.model.DateTime
 import com.google.inject.Inject
 import graphql.MyContext
 import graphql.middleware.AuthPermission
-import graphql.resolvers.{ClientsResolver, DeliveryResolver, DriversResolver}
+import graphql.resolvers.{ClientsResolver, DeliveryResolver, DeliverySolutionResolver, DriversResolver}
 import models._
 import sangria.ast.StringValue
 import sangria.macros.derive._
@@ -14,7 +14,8 @@ import spray.json.DefaultJsonProtocol._
 class DriversSchema @Inject()(
                                  driversResolver: DriversResolver,
                                  clientsResolver: ClientsResolver,
-                                 deliveryResolver: DeliveryResolver) {
+                                 deliveryResolver: DeliveryResolver,
+                                 deliverySolutionResolver: DeliverySolutionResolver) {
 
     implicit val GraphQLDateTime = ScalarType[DateTime]( //1
         "DateTime", //2
@@ -50,16 +51,16 @@ class DriversSchema @Inject()(
         ReplaceField("locationId",
             Field("location", LocationType, resolve = it => deliveryResolver.getLocation(it.value.locationId))
         ),
-        ReplaceField("routeId",
-            Field("route", OptionType(DeliveryRouteType), resolve = it => deliveryResolver.getRoute(it.value.routeId))
-        )
+        ExcludeFields("routeId")
     )
     implicit lazy val DeliveryRouteType: ObjectType[Unit, DeliveryRouteModel] = deriveObjectType[Unit, DeliveryRouteModel](
         Interfaces(IdentifiableType),
         ObjectTypeName("Route"),
         AddFields(
             Field("orders", ListType(DeliveryOrderType),
-                resolve = c => deliveryResolver.getOrders(c.value.id))
+                resolve = c => deliveryResolver.getOrders(c.value.id)),
+            Field("solutions", ListType(RouteSolutionType),
+                resolve = c => deliverySolutionResolver.getSolutions(c.value.id))
         ),
         ReplaceField("startLocationId",
             Field("startLocation", LocationType, resolve = it => deliveryResolver.getLocation(it.value.startLocationId))
@@ -68,6 +69,24 @@ class DriversSchema @Inject()(
             Field("startTime", GraphQLDateTime, resolve = _.value.startTime)
         ),
         ExcludeFields("supplierId")
+    )
+
+    implicit lazy val DeliveryOrderSolutionType: ObjectType[Unit, DeliveryOrderSolution] = deriveObjectType(
+        Interfaces(IdentifiableType),
+        ExcludeFields("solutionId"),
+        AddFields(
+            Field("details", OptionType(DeliveryOrderType), resolve = x => deliveryResolver.getOrder(x.value.orderId))
+        )
+
+    )
+
+    implicit lazy val RouteSolutionType: ObjectType[Unit, RouteSolution] = deriveObjectType[Unit, RouteSolution](
+        Interfaces(IdentifiableType),
+        ExcludeFields("routeId"),
+        AddFields(
+            Field("orders", ListType(DeliveryOrderSolutionType), resolve = x => deliverySolutionResolver.getSolutionDetails(x.value.id))
+        )
+
     )
 
     implicit val locationFormat = jsonFormat3(Location)
@@ -208,6 +227,8 @@ class DriversSchema @Inject()(
             )
         )
     )
+    val Queries: List[Field[MyContext, Unit]] = ClientsQueries ++ DriversQueries ++ DeliveryQueries ++ DeliverySolutionQueries
+
     private val DeliveryQueries: List[Field[MyContext, Unit]] = List(
         Field(
             name = "routes",
@@ -223,9 +244,32 @@ class DriversSchema @Inject()(
             resolve = ctx => deliveryResolver.getRoute(ctx.arg(Id))
         )
     )
+    val Mutations: List[Field[MyContext, Unit]] = DriversMutations ++ ClientsMutations ++ DeliveryMutations ++ DeliverySolutionMutations
+    private val DeliverySolutionMutations: List[Field[MyContext, Unit]] = List(
+        Field(
+            name = "solveRoute",
+            fieldType = RouteSolutionType,
+            tags = AuthPermission("modify:routes") :: Nil,
+            arguments = List(
+                Argument("routeId", StringType),
+                Argument("algorithm", StringType)
+            ),
+            resolve = ctx => deliverySolutionResolver.solveRoute(
+                ctx.args.arg[String]("routeId"),
+                ctx.args.arg[String]("algorithm")
+            )
 
-
-    val Queries: List[Field[MyContext, Unit]] = ClientsQueries ++ DriversQueries ++ DeliveryQueries
-    val Mutations: List[Field[MyContext, Unit]] = DriversMutations ++ ClientsMutations ++ DeliveryMutations
+        )
+    )
+    private val DeliverySolutionQueries: List[Field[MyContext, Unit]] = List(
+        Field(
+            name = "routeSolutions",
+            fieldType = ListType(RouteSolutionType),
+            tags = AuthPermission("read:routes") :: Nil,
+            arguments = Id :: Nil,
+            resolve =
+                ctx => deliverySolutionResolver.getSolutions(ctx.arg(Id))
+        )
+    )
 
 }

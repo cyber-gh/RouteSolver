@@ -1,10 +1,11 @@
-package repositories.optimizer
+package repositories.solver.distance
 
+import com.google.inject.Inject
 import models.Location
 
 import scala.concurrent.Future
 
-class DirectDistanceRepository extends DistanceRepository {
+class DirectDistanceRepository @Inject() extends DistanceRepository {
 
     override def getDistanceMatrix(locations: List[Location]): Future[Array[Array[Double]]] = Future.successful(
         locations.map(x => {

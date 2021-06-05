@@ -25,6 +25,8 @@ class DeliveryResolver @Inject()(deliveryRouteRepository: DeliveryRouteRepositor
 
     def getOrders(routeId: String): Future[List[DeliveryOrderModel]] = deliveryRouteRepository.getOrders(routeId)
 
+    def getOrder(orderId: String): Future[Option[DeliveryOrderModel]] = deliveryRouteRepository.getOrder(orderId)
+
 
     def getLocation(address: String): Future[Location] = locationRepository.getLocation(address)
 

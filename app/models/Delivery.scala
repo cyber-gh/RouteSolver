@@ -2,6 +2,7 @@ package models
 
 import akka.http.scaladsl.model.DateTime
 import models.RouteState.RouteState
+import repositories.solver.utility.DeliveryOrder
 import slick.jdbc.MySQLProfile.api.{Table => SlickTable, _}
 import slick.lifted.{Tag => SlickTag}
 
@@ -20,7 +21,11 @@ case class DeliveryOrderModel(
                                  weight: Option[Double],
                                  volume: Option[Double]
 
-                             ) extends Identifiable
+                             ) extends Identifiable {
+    def toFullOrder(location: Location): DeliveryOrder = {
+        DeliveryOrder(id, routeId, location, startTime, endTime, weight, volume)
+    }
+}
 
 object RouteState extends Enumeration {
     type RouteState = Value
