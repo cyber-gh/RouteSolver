@@ -1,8 +1,10 @@
 package repositories.optimizer
 
-import models.{DeliveryOrderModel, Location}
+import models.Location
 import repositories.optimizer.utility.DeliveryOrder
 
+import scala.concurrent.Future
+
 trait RouteOptimizer {
-    def optimize(startLocation: Location, orders: List[DeliveryOrder]): List[DeliveryOrderModel]
+    def optimize(start: Location, orders: List[DeliveryOrder]): Future[List[(DeliveryOrder, Int)]]
 }

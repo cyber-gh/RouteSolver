@@ -1,6 +1,6 @@
 package models
 
-import java.util.Date
+import akka.http.scaladsl.model.DateTime
 
 
 case class RouteSolution(
@@ -21,6 +21,6 @@ case class DeliveryOrderSolution(
                                     orderId: String,
 
                                     order: Int,
-                                    estimatedArrivalTime: Date,
-                                    estimatedDepartureTime: Date
+                                    estimatedArrivalTime: DateTime,
+                                    estimatedDepartureTime: DateTime
                                 )

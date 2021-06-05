@@ -29,6 +29,8 @@ class DriversSchema @Inject()(
         }
     )
 
+    implicit lazy val RouteStateType = deriveEnumType[RouteState.Value]()
+
     implicit lazy val DriverType: ObjectType[Unit, Driver] = deriveObjectType[Unit, Driver](
         Interfaces(IdentifiableType),
         ObjectTypeName("Driver"),

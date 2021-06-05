@@ -1,6 +1,7 @@
 package models
 
 import akka.http.scaladsl.model.DateTime
+import models.RouteState.RouteState
 import slick.jdbc.MySQLProfile.api.{Table => SlickTable, _}
 import slick.lifted.{Tag => SlickTag}
 
@@ -21,29 +22,49 @@ case class DeliveryOrderModel(
 
                              ) extends Identifiable
 
+object RouteState extends Enumeration {
+    type RouteState = Value
+    val Delivered = Value("delivered")
+    val InDelivery = Value("in_delivery")
+    val Optimized = Value("optimized")
+    val Idle = Value("idle")
+}
+
 case class DeliveryRouteModel(
                                  id: String,
                                  supplierId: String,
                                  name: String,
                                  startLocationId: String,
                                  startTime: DateTime,
+                                 state: RouteState,
 
                                  roundTrip: Boolean
                              ) extends Identifiable
 
 
-object DeliveryRouteModel extends ((String, String, String, String, DateTime, Boolean) => DeliveryRouteModel) {
+object DeliveryRouteModel extends ((String, String, String, String, DateTime, RouteState, Boolean) => DeliveryRouteModel) {
 
     private implicit val dateTimeColumnType = MappedColumnType.base[DateTime, Timestamp](
         dt => new Timestamp(dt.clicks),
         ts => DateTime(ts.getTime)
     )
 
+    private implicit val routeStateColumnType = MappedColumnType.base[RouteState, String](
+        state => state.toString,
+        raw => raw match {
+            case "in_delivery" => RouteState.InDelivery
+            case "delivered" => RouteState.Delivered
+            case "optimized" => RouteState.Optimized
+            //            case RouteState.Idle.toString => RouteState.Idle
+            case _ => RouteState.Idle
+        }
+    )
+
     class Table(tag: SlickTag) extends SlickTable[DeliveryRouteModel](tag, "Routes") {
         lazy val locations = TableQuery[Location.Table]
         lazy val suppliers = TableQuery[Supplier.Table]
 
-        def * = (id, supplierId, name, startLocationId, startTime, roundTrip) <> (DeliveryRouteModel.tupled, DeliveryRouteModel.unapply)
+        def * = (id, supplierId, name, startLocationId, startTime, state, roundTrip) <> (DeliveryRouteModel.tupled, DeliveryRouteModel.unapply)
 
         def id = column[String]("id", O.PrimaryKey)
 
@@ -54,6 +75,8 @@ object DeliveryRouteModel extends ((String, String, String, String, DateTime, Bo
         def startLocationId = column[String]("start_location_id")
 
         def startTime = column[DateTime]("start_time")
+
+        def state = column[RouteState]("state")
 
         def roundTrip = column[Boolean]("round_trip")
 
@@ -92,11 +115,3 @@ object DeliveryOrderModel extends ((String, String, String, Option[String], Opti
 }
 
 
-object DateMapper {
-
-    //    val dateTimeColumnType = MappedColumnType.base[DateTime, Timestamp](
-    //        dt => new Timestamp(dt.clicks),
-    //        ts => DateTime(ts.getTime)
-    //    )
-
-}

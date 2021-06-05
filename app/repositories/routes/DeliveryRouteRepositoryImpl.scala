@@ -3,7 +3,7 @@ package repositories.routes
 import akka.http.scaladsl.model.DateTime
 import com.google.inject.Inject
 import database.AppDatabase
-import models.{DeliveryOrderModel, DeliveryRouteModel, Location}
+import models.{DeliveryOrderModel, DeliveryRouteModel, Location, RouteState}
 import repositories.geocoding.GeocodingRepository
 import slick.lifted.TableQuery
 
@@ -40,7 +40,13 @@ class DeliveryRouteRepositoryImpl @Inject()(
         location <- getLocation(startAddress)
         route <- db.run {
             Actions.addRoute(
-                DeliveryRouteModel(UUID.randomUUID().toString, supplierId = supplierId, name = name, startLocationId = startAddress, startTime = DateTime.now, roundTrip = roundTrip),
+                DeliveryRouteModel(UUID.randomUUID().toString,
+                    supplierId = supplierId,
+                    name = name,
+                    startLocationId = startAddress,
+                    startTime = DateTime.now,
+                    state = RouteState.Idle,
+                    roundTrip = roundTrip),
                 location
             )
         }
