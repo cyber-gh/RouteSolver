@@ -8,6 +8,8 @@ resolvers += "scalaz-bintray" at "https://dl.bintray.com/scalaz/releases"
 
 resolvers += "Akka Snapshot Repository" at "https://repo.akka.io/snapshots/"
 
+resolvers += "Google" at "https://maven.google.com/"
+
 scalaVersion := "2.13.5"
 
 libraryDependencies ++= Seq(ehcache, ws, specs2 % Test, guice)
@@ -43,6 +45,12 @@ libraryDependencies ++= Seq(
 
 libraryDependencies ++= Seq(
     "com.google.maps" % "google-maps-services" % "0.18.1"
+)
+
+libraryDependencies ++= Seq(
+    "com.mapbox.mapboxsdk" % "mapbox-sdk-geojson" % "5.8.0",
+    "com.mapbox.mapboxsdk" % "mapbox-sdk-services" % "5.8.0",
+    "com.mapbox.mapboxsdk" % "mapbox-sdk-core" % "5.8.0"
 )
 
 libraryDependencies ++= Seq(

@@ -18,6 +18,7 @@ object VRPAlg extends Enumeration {
 case class RouteSolution(
                             id: String,
                             routeId: String,
+                            directionsId: Option[String],
 
                             algorithm: VRPAlg,
 
@@ -64,7 +65,7 @@ object DeliveryOrderSolution extends ((String, String, String, Int, DateTime, Da
     }
 }
 
-object RouteSolution extends ((String, String, VRPAlg, Int, Double, Double, Option[Double], Option[Double]) => RouteSolution) {
+object RouteSolution extends ((String, String, Option[String], VRPAlg, Int, Double, Double, Option[Double], Option[Double]) => RouteSolution) {
 
     private implicit val algorithmColumnType = MappedColumnType.base[VRPAlg, String](
         state => state.toString,
@@ -76,11 +77,13 @@ object RouteSolution extends ((String, String, VRPAlg, Int, Double, Double, Opti
     )
 
     class Table(tag: SlickTag) extends SlickTable[RouteSolution](tag, "RouteSolutions") {
-        def * = (id, routeId, algorithm, nrOrders, distance, time, totalWeight, totalVolume) <> (RouteSolution.tupled, RouteSolution.unapply)
+        def * = (id, routeId, directionsId, algorithm, nrOrders, distance, time, totalWeight, totalVolume) <> (RouteSolution.tupled, RouteSolution.unapply)
 
         def id = column[String]("id", O.PrimaryKey)
 
         def routeId = column[String]("route_id")
+
+        def directionsId = column[Option[String]]("directions_id")
 
         def algorithm = column[VRPAlg]("algorithm")
 

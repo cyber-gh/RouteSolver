@@ -49,7 +49,9 @@ class DeliveryRouteRepositoryImpl @Inject()(
                     startLocationId = startAddress,
                     startTime = DateTime.now,
                     state = RouteState.Idle,
-                    roundTrip = roundTrip),
+                    roundTrip = roundTrip,
+                    selectedSolutionId = None
+                ),
                 location
             )
         }

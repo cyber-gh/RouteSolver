@@ -1,5 +1,6 @@
 package repositories.auth0
 
+import com.auth0.client.auth.AuthAPI
 import com.auth0.client.mgmt.ManagementAPI
 import com.auth0.client.mgmt.filter.PageFilter
 import com.auth0.json.mgmt.users.User
@@ -12,7 +13,11 @@ import scala.jdk.FutureConverters._
 class Auth0ManagementImpl @Inject()(implicit val executionContext: ExecutionContext) extends Auth0Management {
 
     private val target = scala.util.Properties.envOrElse("TARGET", "dev")
+
     private val domain = scala.util.Properties.envOrElse("AUTH0_DOMAIN", "")
+    private val clientId = scala.util.Properties.envOrElse("AUTH0_CLIENT_ID", "")
+    private val clientSecret = scala.util.Properties.envOrElse("AUTH0_CLIENT_SECRET", "")
+
     private val token = scala.util.Properties.envOrElse("AUTH0_MANAGEMENT_TOKEN", "")
     private val usersConnection = scala.util.Properties.envOrElse("AUTH0_USERS_CONNECTION", "")
 
@@ -30,19 +35,29 @@ class Auth0ManagementImpl @Inject()(implicit val executionContext: ExecutionCont
             buildMgmt().map(
                 x => {
                     api = Some(x)
-                    return Future.successful(x)
+                    x
                 }
             )
     }
 
-    def buildMgmt(): Future[ManagementAPI] = {
+    private lazy val authApi = new AuthAPI(domain, clientId, clientSecret)
 
-        if (target == "dev") {
-            val mgmt = new ManagementAPI(domain, token)
-            return Future.successful(mgmt)
-        }
-        return Future.failed(new Exception("Cannot obtain Auth0 Management API for production target"))
-    }
+    def buildMgmt(): Future[ManagementAPI] = for {
+        token <- authApi.requestToken(s"https://$domain/api/v2/").executeAsync().asScala
+        mgmt = new ManagementAPI(domain, token.getAccessToken)
+    } yield mgmt
+
+
+    //    def buildMgmt(): Future[ManagementAPI] = {
+    //
+    //        if (target == "dev" && token.nonEmpty) {
+    //            return Future {
+    //                val mgmt = new ManagementAPI(domain, token)
+    //                mgmt
+    //            }
+    //        }
+    //        return Future.failed(new Exception("Cannot obtain Auth0 Management API for production target"))
+    //    }
 
     private def driverRoleId: String = "rol_iT25htSYLou59w6P"
 

@@ -38,7 +38,11 @@ class DriversRepositoryImpl @Inject()(val database: AppDatabase, val auth0Api: A
     private def combineDetails(users: List[User], driverDetails: List[Driver]): List[Driver] = {
         users.map(x => {
             val d = driverDetails.findLast(_.id == x.getId)
-            Driver(x.getId, x.getName, x.getEmail, d.orNull.vehicleId, d.orNull.supplierId)
+            d match {
+                case Some(value) => Driver(x.getId, x.getName, x.getEmail, value.vehicleId, value.supplierId)
+                case None => Driver(x.getId, x.getName, x.getEmail, None, None)
+            }
+
         })
     }
 
@@ -54,8 +58,8 @@ class DriversRepositoryImpl @Inject()(val database: AppDatabase, val auth0Api: A
         drivers <- db.run {
             Actions.getDriversBySupplier(supplierId)
         }
-    } yield combineDetails(users, drivers)
-
+        ans = combineDetails(users, drivers)
+    } yield ans
     import profile.api._
 
     override def delete(idx: String): Future[Boolean] = db.run {

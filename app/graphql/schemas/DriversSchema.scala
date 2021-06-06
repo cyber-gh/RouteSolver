@@ -67,6 +67,9 @@ class DriversSchema @Inject()(
         ReplaceField("startLocationId",
             Field("startLocation", LocationType, resolve = it => deliveryResolver.getLocation(it.value.startLocationId))
         ),
+        ReplaceField("selectedSolutionId",
+            Field("selectedSolution", OptionType(RouteSolutionType), resolve = it => deliverySolutionResolver.getSolution(it.value.selectedSolutionId))
+        ),
         ReplaceField("startTime",
             Field("startTime", GraphQLDateTime, resolve = _.value.startTime)
         ),
@@ -82,11 +85,16 @@ class DriversSchema @Inject()(
 
     )
 
+    implicit lazy val RouteDirectionsType: ObjectType[Unit, RouteDirections] = deriveObjectType()
+
     implicit lazy val RouteSolutionType: ObjectType[Unit, RouteSolution] = deriveObjectType[Unit, RouteSolution](
         Interfaces(IdentifiableType),
         ExcludeFields("routeId"),
         AddFields(
             Field("orders", ListType(DeliveryOrderSolutionType), resolve = x => deliverySolutionResolver.getSolutionDetails(x.value.id))
+        ),
+        ReplaceField("directionsId",
+            Field("directions", OptionType(RouteDirectionsType), resolve = x => deliverySolutionResolver.getDirections(x.value.directionsId))
         )
 
     )
@@ -246,7 +254,6 @@ class DriversSchema @Inject()(
             resolve = ctx => deliveryResolver.getRoute(ctx.arg(Id))
         )
     )
-    val Queries: List[Field[MyContext, Unit]] = ClientsQueries ++ DriversQueries ++ DeliveryQueries ++ DeliverySolutionQueries
     private val DeliverySolutionQueries: List[Field[MyContext, Unit]] = List(
         Field(
             name = "routeSolutions",
@@ -257,7 +264,6 @@ class DriversSchema @Inject()(
                 ctx => deliverySolutionResolver.getSolutions(ctx.arg(Id))
         )
     )
-    val Mutations: List[Field[MyContext, Unit]] = DriversMutations ++ ClientsMutations ++ DeliveryMutations ++ DeliverySolutionMutations
     private val DeliverySolutionMutations: List[Field[MyContext, Unit]] = List(
         Field(
             name = "solveRoute",
@@ -274,6 +280,34 @@ class DriversSchema @Inject()(
 
         ),
         Field(
+            name = "setSolution",
+            fieldType = OptionType(RouteSolutionType),
+            tags = AuthPermission("modify:routes") :: Nil,
+            arguments = List(
+                Argument("routeId", StringType),
+                Argument("solutionId", StringType)
+            ),
+            resolve =
+                ctx => deliverySolutionResolver.setRouteSolution(
+                    ctx.args.arg[String]("routeId"),
+                    ctx.args.arg[String]("solutionId")
+                )
+        ),
+
+        Field(
+            name = "setBestSolution",
+            fieldType = OptionType(RouteSolutionType),
+            tags = AuthPermission("modify:routes") :: Nil,
+            arguments = List(
+                Argument("routeId", StringType)
+            ),
+            resolve =
+                ctx => deliverySolutionResolver.setBestSolution(
+                    ctx.args.arg[String]("routeId")
+                )
+        ),
+
+        Field(
             name = "deleteSolution",
             fieldType = BooleanType,
             tags = AuthPermission("modify:routes") :: Nil,
@@ -284,4 +318,8 @@ class DriversSchema @Inject()(
 
         )
     )
+
+    val Queries: List[Field[MyContext, Unit]] = ClientsQueries ++ DriversQueries ++ DeliveryQueries ++ DeliverySolutionQueries
+    val Mutations: List[Field[MyContext, Unit]] = DriversMutations ++ ClientsMutations ++ DeliveryMutations ++ DeliverySolutionMutations
+
 }

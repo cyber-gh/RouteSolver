@@ -43,11 +43,13 @@ case class DeliveryRouteModel(
                                  startTime: DateTime,
                                  state: RouteState,
 
+                                 selectedSolutionId: Option[String],
+
                                  roundTrip: Boolean
                              ) extends Identifiable
 
 
-object DeliveryRouteModel extends ((String, String, String, String, DateTime, RouteState, Boolean) => DeliveryRouteModel) {
+object DeliveryRouteModel extends ((String, String, String, String, DateTime, RouteState, Option[String], Boolean) => DeliveryRouteModel) {
 
     private implicit val dateTimeColumnType = MappedColumnType.base[DateTime, Timestamp](
         dt => new Timestamp(dt.clicks),
@@ -69,7 +71,7 @@ object DeliveryRouteModel extends ((String, String, String, String, DateTime, Ro
         lazy val locations = TableQuery[Location.Table]
         lazy val suppliers = TableQuery[Supplier.Table]
 
-        def * = (id, supplierId, name, startLocationId, startTime, state, roundTrip) <> (DeliveryRouteModel.tupled, DeliveryRouteModel.unapply)
+        def * = (id, supplierId, name, startLocationId, startTime, state, selectedSolutionId, roundTrip) <> (DeliveryRouteModel.tupled, DeliveryRouteModel.unapply)
 
         def id = column[String]("id", O.PrimaryKey)
 
@@ -84,6 +86,8 @@ object DeliveryRouteModel extends ((String, String, String, String, DateTime, Ro
         def state = column[RouteState]("state")
 
         def roundTrip = column[Boolean]("round_trip")
+
+        def selectedSolutionId = column[Option[String]]("selected_solution_id")
 
         def supplier = foreignKey("supplier", supplierId, suppliers)(_.id)
 

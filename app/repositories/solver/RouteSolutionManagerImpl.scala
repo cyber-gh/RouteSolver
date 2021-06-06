@@ -4,7 +4,8 @@ import akka.http.scaladsl.model.DateTime
 import com.google.inject.Inject
 import database.AppDatabase
 import models.VRPAlg.VRPAlg
-import models.{DeliveryOrderSolution, RouteSolution, VRPAlg}
+import models._
+import repositories.directions.DirectionsRepository
 import repositories.routes.{DeliveryRouteRepository, LocationRepository}
 import repositories.solver.optimizer.{BasicRouteOptimizer, NearestNeighbourOptimizer}
 import slick.lifted.TableQuery
@@ -17,6 +18,7 @@ class RouteSolutionManagerImpl @Inject()(
                                             private val backtrackOptimizer: BasicRouteOptimizer,
                                             private val nnOptimizer: NearestNeighbourOptimizer,
                                             private val locationRepository: LocationRepository,
+                                            private val directionsRepository: DirectionsRepository,
                                             private val database: AppDatabase,
                                             implicit val executionContext: ExecutionContext) extends RouteSolutionManager {
     val profile = database.profile
@@ -25,9 +27,56 @@ class RouteSolutionManagerImpl @Inject()(
      */
     private val db = database.db
     private val routesTable = TableQuery[models.DeliveryRouteModel.Table]
-    private val ordersTable = TableQuery[models.DeliveryOrderModel.Table]
     private val solutionsTable = TableQuery[models.RouteSolution.Table]
     private val solutionOrdersTable = TableQuery[models.DeliveryOrderSolution.Table]
+    private val ordersTable = TableQuery[models.DeliveryOrderModel.Table]
+    private val locationsTable = TableQuery[models.Location.Table]
+    private val directionsTable = TableQuery[models.RouteDirections.Table]
+
+    import profile.api._
+
+    override def getDirections(idx: String): Future[Option[RouteDirections]] = for {
+        directions <- db.run(Actions.getDirections(idx))
+    } yield directions
+
+    private def setDirections(route: DeliveryRouteModel, solution: RouteSolution): Future[Unit] = for {
+        startLocation <- locationRepository.getLocation(route.startLocationId)
+        combined <- db.run {
+            Actions.getSolutionLocationsOrder(solution.id).result
+        }
+        locations = List(startLocation) ++ combined.sortBy(_._2).map(_._1)
+        directions <- directionsRepository.calculateDirections(locations)
+        _ <- db.run {
+            Actions.addDirections(directions)
+        }
+        s = solution.copy(directionsId = Some(directions.id))
+        _ <- db.run {
+            Actions.addSolution(s)
+        }
+
+    } yield ()
+
+    override def selectSolution(routeId: String, solutionId: String): Future[Option[RouteSolution]] = for {
+        route <- db.run {
+            Actions.getRoute(routeId)
+        }
+        solution <- getSolution(solutionId)
+        t <- if (route.nonEmpty && solution.nonEmpty) for {
+            _ <- db.run {
+                Actions.updateRouteSolution(routeId, solutionId)
+            }
+            _ <- setDirections(route.get, solution.get)
+        } yield ()
+        else Future.successful(None)
+    } yield solution
+
+    override def selectBestSolution(routeId: String): Future[Option[RouteSolution]] = for {
+        solution <- getAllSolutions(routeId).map(x => x.minByOption(it => it.distance))
+        sol <- solution match {
+            case Some(value) => selectSolution(routeId, value.id)
+            case None => Future.successful(None)
+        }
+    } yield sol
 
     override def solveRoute(routeId: String, algorithm: VRPAlg): Future[RouteSolution] = for {
         s <- db.run {
@@ -64,7 +113,7 @@ class RouteSolutionManagerImpl @Inject()(
             fullSolution <- optimizer.optimize(startLocation, fullOrders)
 
             ordersSolution = fullSolution.orders
-            routeSolution = RouteSolution(UUID.randomUUID().toString, routeId, algorithm, orders.length, fullSolution.cost, 0, None, None)
+            routeSolution = RouteSolution(UUID.randomUUID().toString, routeId, None, algorithm, orders.length, fullSolution.cost, 0, None, None)
             solutionOrders = ordersSolution.map { case (delivery, orderOf) => DeliveryOrderSolution(UUID.randomUUID().toString, routeSolution.id, delivery.id, orderOf, DateTime.now, DateTime.now + (5 * 60 * 1000)) }
         } yield (routeSolution, solutionOrders)
     }
@@ -85,7 +134,7 @@ class RouteSolutionManagerImpl @Inject()(
         Actions.removeSolution(solutionId)
     }
 
-    import profile.api._
+
 
     object Actions {
         private implicit val algorithmColumnType = MappedColumnType.base[VRPAlg, String](
@@ -111,6 +160,8 @@ class RouteSolutionManagerImpl @Inject()(
 
         def getSolution(idx: String): DBIO[Option[RouteSolution]] = solutionsTable.filter(_.id === idx).result.headOption
 
+        def getRoute(idx: String): DBIO[Option[DeliveryRouteModel]] = routesTable.filter(_.id === idx).result.headOption
+
         def getSolution(routeId: String, algorithm: VRPAlg): DBIO[Option[RouteSolution]] =
             solutionsTable.filter(x => x.routeId === routeId && x.algorithm === algorithm).result.headOption
 
@@ -122,6 +173,24 @@ class RouteSolutionManagerImpl @Inject()(
             _ <- solutionOrdersTable.filter(_.solutionId === solutionId).delete
             _ <- solutionsTable.filter(_.id === solutionId).delete
         } yield true
+
+        def updateRouteSolution(routeId: String, solutionId: String): DBIO[Unit] = for {
+            route <- routesTable.filter(_.id === routeId).result.head
+            _ <- routesTable.insertOrUpdate(route.copy(selectedSolutionId = Some(solutionId)))
+        } yield ()
+
+        def getSolutionLocationsOrder(solutionId: String) = for {
+            s <- solutionOrdersTable if s.solutionId === solutionId
+            o <- ordersTable if s.orderId === o.id
+            l <- locationsTable if o.locationId === l.address
+        } yield (l, s.order)
+
+        def addDirections(directions: RouteDirections) = for {
+            _ <- directionsTable.insertOrUpdate(directions)
+        } yield ()
+
+        def getDirections(idx: String): DBIO[Option[RouteDirections]] = directionsTable.filter(_.id === idx).result.headOption
+
 
     }
 
