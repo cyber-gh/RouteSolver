@@ -5,6 +5,7 @@ import com.google.inject.Inject
 import graphql.MyContext
 import graphql.middleware.AuthPermission
 import graphql.resolvers.{ClientsResolver, DeliveryResolver, DeliverySolutionResolver, DriversResolver}
+import models.VRPAlg.VRPAlg
 import models._
 import sangria.ast.StringValue
 import sangria.macros.derive._
@@ -31,6 +32,7 @@ class DriversSchema @Inject()(
     )
 
     implicit lazy val RouteStateType = deriveEnumType[RouteState.Value]()
+    implicit lazy val VRPAlgType = deriveEnumType[VRPAlg.Value]()
 
     implicit lazy val DriverType: ObjectType[Unit, Driver] = deriveObjectType[Unit, Driver](
         Interfaces(IdentifiableType),
@@ -227,7 +229,7 @@ class DriversSchema @Inject()(
             )
         )
     )
-    val Queries: List[Field[MyContext, Unit]] = ClientsQueries ++ DriversQueries ++ DeliveryQueries ++ DeliverySolutionQueries
+
 
     private val DeliveryQueries: List[Field[MyContext, Unit]] = List(
         Field(
@@ -244,23 +246,7 @@ class DriversSchema @Inject()(
             resolve = ctx => deliveryResolver.getRoute(ctx.arg(Id))
         )
     )
-    val Mutations: List[Field[MyContext, Unit]] = DriversMutations ++ ClientsMutations ++ DeliveryMutations ++ DeliverySolutionMutations
-    private val DeliverySolutionMutations: List[Field[MyContext, Unit]] = List(
-        Field(
-            name = "solveRoute",
-            fieldType = RouteSolutionType,
-            tags = AuthPermission("modify:routes") :: Nil,
-            arguments = List(
-                Argument("routeId", StringType),
-                Argument("algorithm", StringType)
-            ),
-            resolve = ctx => deliverySolutionResolver.solveRoute(
-                ctx.args.arg[String]("routeId"),
-                ctx.args.arg[String]("algorithm")
-            )
-
-        )
-    )
+    val Queries: List[Field[MyContext, Unit]] = ClientsQueries ++ DriversQueries ++ DeliveryQueries ++ DeliverySolutionQueries
     private val DeliverySolutionQueries: List[Field[MyContext, Unit]] = List(
         Field(
             name = "routeSolutions",
@@ -271,5 +257,31 @@ class DriversSchema @Inject()(
                 ctx => deliverySolutionResolver.getSolutions(ctx.arg(Id))
         )
     )
+    val Mutations: List[Field[MyContext, Unit]] = DriversMutations ++ ClientsMutations ++ DeliveryMutations ++ DeliverySolutionMutations
+    private val DeliverySolutionMutations: List[Field[MyContext, Unit]] = List(
+        Field(
+            name = "solveRoute",
+            fieldType = RouteSolutionType,
+            tags = AuthPermission("modify:routes") :: Nil,
+            arguments = List(
+                Argument("routeId", StringType),
+                Argument("algorithm", VRPAlgType)
+            ),
+            resolve = ctx => deliverySolutionResolver.solveRoute(
+                ctx.args.arg[String]("routeId"),
+                ctx.args.arg[VRPAlg]("algorithm")
+            )
 
+        ),
+        Field(
+            name = "deleteSolution",
+            fieldType = BooleanType,
+            tags = AuthPermission("modify:routes") :: Nil,
+            arguments = Id :: Nil,
+            resolve = ctx => deliverySolutionResolver.deleteSolution(
+                ctx.arg(Id)
+            )
+
+        )
+    )
 }

@@ -1,7 +1,7 @@
 package graphql.resolvers
 
 import com.google.inject.Inject
-import errors.UndefinedAlgorithm
+import models.VRPAlg.VRPAlg
 import models.{DeliveryOrderSolution, RouteSolution}
 import repositories.solver.RouteSolutionManager
 
@@ -13,8 +13,7 @@ class DeliverySolutionResolver @Inject()(repo: RouteSolutionManager) {
 
     def getSolutionDetails(solutionId: String): Future[List[DeliveryOrderSolution]] = repo.getDeliveryOrders(solutionId)
 
-    def solveRoute(routeId: String, algorithm: String): Future[RouteSolution] = algorithm match {
-        case "backtrack" => repo.solveRoute(routeId, algorithm)
-        case _ => Future.failed(new UndefinedAlgorithm("No such algorithm is available"))
-    }
+    def solveRoute(routeId: String, algorithm: VRPAlg): Future[RouteSolution] = repo.solveRoute(routeId, algorithm)
+
+    def deleteSolution(idx: String): Future[Boolean] = repo.removeSolution(idx)
 }

@@ -1,17 +1,25 @@
 package models
 
 import akka.http.scaladsl.model.DateTime
+import models.VRPAlg.VRPAlg
 import slick.jdbc.MySQLProfile.api.{Table => SlickTable, _}
 import slick.lifted.{Tag => SlickTag}
 
 import java.sql.Timestamp
+
+object VRPAlg extends Enumeration {
+    type VRPAlg = Value
+    val backtrack = Value("backtrack")
+    val nearestNeighbour = Value("nearest_neighbour")
+    val unknown = Value("unknown")
+}
 
 
 case class RouteSolution(
                             id: String,
                             routeId: String,
 
-                            algorithm: String,
+                            algorithm: VRPAlg,
 
                             nrOrders: Int,
                             distance: Double, // in meters
@@ -56,15 +64,25 @@ object DeliveryOrderSolution extends ((String, String, String, Int, DateTime, Da
     }
 }
 
-object RouteSolution extends ((String, String, String, Int, Double, Double, Option[Double], Option[Double]) => RouteSolution) {
+object RouteSolution extends ((String, String, VRPAlg, Int, Double, Double, Option[Double], Option[Double]) => RouteSolution) {
+
+    private implicit val algorithmColumnType = MappedColumnType.base[VRPAlg, String](
+        state => state.toString,
+        {
+            case "backtrack" => VRPAlg.backtrack
+            case "nearest_neighbour" => VRPAlg.nearestNeighbour
+            case _ => VRPAlg.unknown
+        }
+    )
+
     class Table(tag: SlickTag) extends SlickTable[RouteSolution](tag, "RouteSolutions") {
         def * = (id, routeId, algorithm, nrOrders, distance, time, totalWeight, totalVolume) <> (RouteSolution.tupled, RouteSolution.unapply)
 
-        def id = column[String]("id")
+        def id = column[String]("id", O.PrimaryKey)
 
         def routeId = column[String]("route_id")
 
-        def algorithm = column[String]("algorithm")
+        def algorithm = column[VRPAlg]("algorithm")
 
         def nrOrders = column[Int]("nr_orders")
 

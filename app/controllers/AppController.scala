@@ -49,18 +49,29 @@ class AppController @Inject()(graphQL: GraphQL, cc: ControllerComponents, authSe
                 }
             }
 
-            extractBearerToken(request) map { token =>
-                authService.validateJwt(token) match {
-                    case Success(claim) =>
-                        maybeQuery match {
-                            case Success((query, operationName, variables)) => executeQuery(query, variables, operationName, UserDetails(claim.subject.getOrElse(""), permissions(claim)))
-                            case Failure(error) => Future.successful {
-                                BadRequest(error.getMessage)
+
+            if (authEnabled) {
+                extractBearerToken(request) map { token =>
+                    authService.validateJwt(token) match {
+                        case Success(claim) =>
+                            maybeQuery match {
+                                case Success((query, operationName, variables)) => executeQuery(query, variables, operationName, UserDetails(claim.subject.getOrElse(""), permissions(claim)))
+                                case Failure(error) => Future.successful {
+                                    BadRequest(error.getMessage)
+                                }
                             }
-                        }
-                    case Failure(t) => Future.successful(Results.Unauthorized(t.getMessage)) // token was invalid - return 401
+                        case Failure(t) => Future.successful(Results.Unauthorized(t.getMessage)) // token was invalid - return 401
+                    }
+                } getOrElse Future.successful(Results.Unauthorized)
+
+            } else {
+                maybeQuery match {
+                    case Success((query, operationName, variables)) => executeQuery(query, variables, operationName, UserDetails("", List()))
+                    case Failure(error) => Future.successful {
+                        BadRequest(error.getMessage)
+                    }
                 }
-            } getOrElse Future.successful(Results.Unauthorized)
+            }
 
 
         }

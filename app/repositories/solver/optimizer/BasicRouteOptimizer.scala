@@ -8,7 +8,7 @@ import repositories.solver.utility.{DeliveryOrder, OptimizeSolution}
 import scala.concurrent.{ExecutionContext, Future}
 
 
-class BacktrackOptimizer(val distanceMatrix: Array[Array[Double]], val nr: Int) {
+class BacktrackAlgorithm(val distanceMatrix: Array[Array[Double]], val nr: Int) {
 
     def run(): (List[Int], Double) = {
         val sol = Range(0, nr).toList.permutations
@@ -28,7 +28,7 @@ class BasicRouteOptimizer @Inject()(distanceRepository: DistanceRepository, impl
         val locations = List(start) ++ orders.map(_.location)
         return for {
             distanceMatrix <- distanceRepository.getDistanceMatrix(locations)
-            optimizer = new BacktrackOptimizer(distanceMatrix, locations.length)
+            optimizer = new BacktrackAlgorithm(distanceMatrix, locations.length)
             (ans, cost) = optimizer.run()
             finalOrders = ans.drop(1).zipWithIndex.map { case (o, idx) => (orders(o - 1), idx) }
             sortedOrders = finalOrders.sortBy { case (order, idx) => idx }
