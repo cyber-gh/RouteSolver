@@ -26,6 +26,39 @@ class AppController @Inject()(graphQL: GraphQL, cc: ControllerComponents, authSe
 
     private val headerTokenRegex = """Bearer (.+?)""".r
 
+    def graphqlBodyUnsecure = Action.async(parse.json) {
+        implicit request: Request[JsValue] => {
+            val extract: JsValue => (String, Option[String], Option[JsObject]) = query => (
+                (query \ "query").as[String],
+                (query \ "operationName").asOpt[String],
+                (query \ "variables").toOption.flatMap {
+                    case JsString(vars) => Some(parseVariables(vars))
+                    case obj: JsObject => Some(obj)
+                    case _ => None
+                }
+            )
+
+            val maybeQuery: Try[(String, Option[String], Option[JsObject])] = Try {
+                request.body match {
+                    case arrayBody@JsArray(_) => extract(arrayBody.value(0))
+                    case objectBody@JsObject(_) => extract(objectBody)
+                    case otherType =>
+                        throw new Error {
+                            s"/graphql endpoint does not support request body of type [${otherType.getClass.getSimpleName}]"
+                        }
+                }
+            }
+            maybeQuery match {
+                case Success((query, operationName, variables)) => executeQuery(query, variables, operationName, UserDetails("", List()))
+                case Failure(error) => Future.successful {
+                    BadRequest(error.getMessage)
+                }
+            }
+
+
+        }
+    }
+
     def graphqlBody = Action.async(parse.json) {
         implicit request: Request[JsValue] => {
             val extract: JsValue => (String, Option[String], Option[JsObject]) = query => (
@@ -49,29 +82,18 @@ class AppController @Inject()(graphQL: GraphQL, cc: ControllerComponents, authSe
                 }
             }
 
-
-            if (authEnabled) {
-                extractBearerToken(request) map { token =>
-                    authService.validateJwt(token) match {
-                        case Success(claim) =>
-                            maybeQuery match {
-                                case Success((query, operationName, variables)) => executeQuery(query, variables, operationName, UserDetails(claim.subject.getOrElse(""), permissions(claim)))
-                                case Failure(error) => Future.successful {
-                                    BadRequest(error.getMessage)
-                                }
+            extractBearerToken(request) map { token =>
+                authService.validateJwt(token) match {
+                    case Success(claim) =>
+                        maybeQuery match {
+                            case Success((query, operationName, variables)) => executeQuery(query, variables, operationName, UserDetails(claim.subject.getOrElse(""), permissions(claim)))
+                            case Failure(error) => Future.successful {
+                                BadRequest(error.getMessage)
                             }
-                        case Failure(t) => Future.successful(Results.Unauthorized(t.getMessage)) // token was invalid - return 401
-                    }
-                } getOrElse Future.successful(Results.Unauthorized)
-
-            } else {
-                maybeQuery match {
-                    case Success((query, operationName, variables)) => executeQuery(query, variables, operationName, UserDetails("", List()))
-                    case Failure(error) => Future.successful {
-                        BadRequest(error.getMessage)
-                    }
+                        }
+                    case Failure(t) => Future.successful(Results.Unauthorized(t.getMessage)) // token was invalid - return 401
                 }
-            }
+            } getOrElse Future.successful(Results.Unauthorized)
 
 
         }

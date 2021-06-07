@@ -22,19 +22,27 @@ class ClientsRepositoryImpl @Inject()(val database: AppDatabase,
     private val db = database.db
     private val clientsTable = TableQuery[DeliveryClient.Table]
 
-    override def create(name: String, email: String, address: String, supplierId: String): Future[DeliveryClient] = for {
+    override def create(name: String, email: String, address: String, supplierId: String, startTime: Option[String], endTime: Option[String], weight: Option[Double], volume: Option[Double]): Future[DeliveryClient] = for {
         location <- locationRepository.getLocation(address)
-        client = DeliveryClient(UUID.randomUUID().toString, name, email, locationId = location.address, supplierId = Some(supplierId))
+        client = DeliveryClient(
+            UUID.randomUUID().toString,
+            name,
+            email,
+            locationId = location.address,
+            supplierId = Some(supplierId),
+            startTime = startTime, endTime = endTime, weight = weight, volume = volume
+        )
         insertedClient <- db.run {
             Actions.addClient(client)
         }
     } yield insertedClient
 
+
     override def create(name: String, email: String, lat: Double, lng: Double, supplierId: String): Future[DeliveryClient] = for {
         location <- locationRepository.getLocation(lat, lng)
         client <- db.run {
             Actions.addClient(
-                DeliveryClient(UUID.randomUUID().toString, name, email, locationId = location.address, supplierId = Some(supplierId))
+                DeliveryClient(UUID.randomUUID().toString, name, email, locationId = location.address, supplierId = Some(supplierId), None, None, None, None)
             )
         }
     } yield client

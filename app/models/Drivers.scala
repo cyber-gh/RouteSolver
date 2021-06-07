@@ -24,7 +24,7 @@ case class Driver(
                      id: String,
                      name: String,
                      email: String,
-
+                     locationId: String,
 
                      vehicleId: Option[String],
                      supplierId: Option[String]
@@ -60,18 +60,20 @@ object Vehicle extends ((String, String, Double, Double, Double) => Vehicle) {
 }
 
 
-object Driver extends ((String, String, String, Option[String], Option[String]) => Driver) {
+object Driver extends ((String, String, String, String, Option[String], Option[String]) => Driver) {
     class Table(tag: SlickTag) extends SlickTable[Driver](tag, "Drivers") {
         private lazy val vehicles = TableQuery[Vehicle.Table]
         private lazy val suppliers = TableQuery[Supplier.Table]
 
-        def * = (id, name, email, vehicleId, supplierId) <> (Driver.tupled, Driver.unapply)
+        def * = (id, name, email, locationId, vehicleId, supplierId) <> (Driver.tupled, Driver.unapply)
 
         def id = column[String]("id", O.PrimaryKey)
 
         def email = column[String]("email")
 
         def vehicleId = column[Option[String]]("vehicle_id")
+
+        def locationId = column[String]("location_id")
 
         def name = column[String]("name")
 

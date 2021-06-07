@@ -4,19 +4,26 @@ import akka.http.scaladsl.model.DateTime
 import com.google.inject.Inject
 import graphql.MyContext
 import graphql.middleware.AuthPermission
-import graphql.resolvers.{ClientsResolver, DeliveryResolver, DeliverySolutionResolver, DriversResolver}
+import graphql.resolvers.{DeliveryResolver, DeliverySolutionResolver, DriversResolver}
 import models.VRPAlg.VRPAlg
 import models._
+import repositories.clients.ClientsRepository
 import sangria.ast.StringValue
 import sangria.macros.derive._
+import sangria.marshalling.sprayJson.sprayJsonReaderFromInput
 import sangria.schema.{ObjectType, _}
 import spray.json.DefaultJsonProtocol._
 
 class DriversSchema @Inject()(
                                  driversResolver: DriversResolver,
-                                 clientsResolver: ClientsResolver,
+                                 clientsResolver: ClientsRepository,
                                  deliveryResolver: DeliveryResolver,
                                  deliverySolutionResolver: DeliverySolutionResolver) {
+
+
+    implicit val clientFormat = jsonFormat7(DeliveryClientInputForm)
+    val DeliveryClientInputType: InputObjectType[DeliveryClientInputForm] = deriveInputObjectType[DeliveryClientInputForm]()
+    val DeliveryClientArg = Argument("client", DeliveryClientInputType)
 
     implicit val GraphQLDateTime = ScalarType[DateTime]( //1
         "DateTime", //2
@@ -37,7 +44,10 @@ class DriversSchema @Inject()(
     implicit lazy val DriverType: ObjectType[Unit, Driver] = deriveObjectType[Unit, Driver](
         Interfaces(IdentifiableType),
         ObjectTypeName("Driver"),
-        ExcludeFields("supplierId")
+        ExcludeFields("supplierId", "vehicleId"),
+        ReplaceField("locationId",
+            Field("location", LocationType, resolve = x => deliveryResolver.getLocation(x.value.locationId))
+        )
     )
     implicit lazy val DeliveryClientType: ObjectType[Unit, DeliveryClient] = deriveObjectType[Unit, DeliveryClient](
         Interfaces(IdentifiableType),
@@ -114,13 +124,15 @@ class DriversSchema @Inject()(
             fieldType = DriverType,
             arguments = List(
                 Argument("name", StringType),
-                Argument("email", StringType)
+                Argument("email", StringType),
+                Argument("address", StringType)
             ),
             tags = AuthPermission("modify:drivers") :: Nil,
             resolve =
                 ctx => driversResolver.addDriver(
                     ctx.args.arg[String]("name"),
                     ctx.args.arg[String]("email"),
+                    ctx.args.arg[String]("address"),
                     ctx.ctx.userDetails.userId
                 )
         ),
@@ -161,20 +173,21 @@ class DriversSchema @Inject()(
         )
     )
     private val ClientsMutations: List[Field[MyContext, Unit]] = List(
+
         Field(
             name = "addClient",
             fieldType = DeliveryClientType,
             tags = AuthPermission("modify:clients") :: Nil,
-            arguments = List(
-                Argument("name", StringType),
-                Argument("email", StringType),
-                Argument("address", StringType)
-            ),
-            resolve = ctx => clientsResolver.addClient(
-                ctx.args.arg[String]("name"),
-                ctx.args.arg[String]("email"),
-                ctx.args.arg[String]("address"),
-                ctx.ctx.userDetails.userId
+            arguments = DeliveryClientArg :: Nil,
+            resolve = ctx => clientsResolver.create(
+                ctx.arg(DeliveryClientArg).name,
+                ctx.arg(DeliveryClientArg).email,
+                ctx.arg(DeliveryClientArg).address,
+                ctx.ctx.userDetails.userId,
+                ctx.arg(DeliveryClientArg).startTime,
+                ctx.arg(DeliveryClientArg).endTime,
+                ctx.arg(DeliveryClientArg).weight,
+                ctx.arg(DeliveryClientArg).volume
             )
         ),
         Field(
@@ -184,7 +197,7 @@ class DriversSchema @Inject()(
             arguments = List(
                 Argument("id", StringType)
             ),
-            resolve = ctx => clientsResolver.removeClient(
+            resolve = ctx => clientsResolver.delete(
                 ctx.args.arg[String]("id")
             )
         )

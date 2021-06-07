@@ -3,6 +3,7 @@ package repositories.routes
 import akka.http.scaladsl.model.DateTime
 import com.google.inject.Inject
 import database.AppDatabase
+import errors.{EntityNotFound, OperationNotPermitted}
 import models.{DeliveryOrderModel, DeliveryRouteModel, Location, RouteState}
 import repositories.geocoding.GeocodingRepository
 import slick.lifted.TableQuery
@@ -77,9 +78,19 @@ class DeliveryRouteRepositoryImpl @Inject()(
         Actions.getRoute(idx)
     }
 
-    override def deleteRoute(routeId: String): Future[Boolean] = db.run {
-        Actions.deleteRoute(routeId)
-    }
+    override def deleteRoute(routeId: String): Future[Boolean] = for {
+        maybeRoute <- getRoute(routeId)
+        route <- maybeRoute match {
+            case Some(value) => Future.successful(value)
+            case None => Future.failed(EntityNotFound("No such route"))
+        }
+        result <- route.state match {
+            case RouteState.Idle => db.run {
+                Actions.deleteRoute(routeId)
+            }
+            case _ => Future.failed(OperationNotPermitted(s"Cannot delete route in state ${route.state.toString}"))
+        }
+    } yield result
 
     override def addOrder(routeId: String, address: String): Future[DeliveryOrderModel] = for {
         location <- getLocation(address)
@@ -129,6 +140,7 @@ class DeliveryRouteRepositoryImpl @Inject()(
         def getOrder(orderId: String): DBIO[Option[DeliveryOrderModel]] = ordersTable.filter(_.id === orderId).result.headOption
 
         def deleteRoute(routeId: String): DBIO[Boolean] = for {
+            t <- ordersTable.filter(_.routeId === routeId).delete
             maybeDeleted <- routesTable.filter(_.id === routeId).delete
             isDeleted = if (maybeDeleted == 1) true else false
         } yield isDeleted

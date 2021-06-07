@@ -6,19 +6,21 @@ import database.AppDatabase
 import errors.AmbigousResult
 import models.{Driver, Vehicle}
 import repositories.auth0.Auth0Management
+import repositories.routes.LocationRepository
 import slick.lifted.TableQuery
 
 import scala.concurrent.{ExecutionContext, Future}
 
 
 @Singleton
-class DriversRepositoryImpl @Inject()(val database: AppDatabase, val auth0Api: Auth0Management, implicit val executionContext: ExecutionContext) extends DriversRepository {
+class DriversRepositoryImpl @Inject()(val database: AppDatabase, val auth0Api: Auth0Management, val locationRepository: LocationRepository, implicit val executionContext: ExecutionContext) extends DriversRepository {
 
 
     override def create(driver: Driver): Future[Driver] = for {
         user <- auth0Api.registerDriver(driver.name, driver.email)
+        newLocationId <- locationRepository.getLocation(driver.locationId)
         driver <- db.run {
-            Actions.addDriver(driver.copy(id = user.getId))
+            Actions.addDriver(driver.copy(id = user.getId, locationId = newLocationId.address))
         }
     } yield driver
 
@@ -29,18 +31,17 @@ class DriversRepositoryImpl @Inject()(val database: AppDatabase, val auth0Api: A
     val profile = database.profile
 
     override def getAll: Future[List[Driver]] = for {
-        users <- auth0Api.listDrivers
         drivers <- db.run {
             Actions.getAllDrivers
         }
-    } yield combineDetails(users, drivers)
+    } yield drivers
 
     private def combineDetails(users: List[User], driverDetails: List[Driver]): List[Driver] = {
         users.map(x => {
             val d = driverDetails.findLast(_.id == x.getId)
             d match {
-                case Some(value) => Driver(x.getId, x.getName, x.getEmail, value.vehicleId, value.supplierId)
-                case None => Driver(x.getId, x.getName, x.getEmail, None, None)
+                case Some(value) => Driver(x.getId, x.getName, x.getEmail, value.locationId, value.vehicleId, value.supplierId)
+                case None => Driver(x.getId, x.getName, x.getEmail, "", None, None)
             }
 
         })
@@ -54,12 +55,12 @@ class DriversRepositoryImpl @Inject()(val database: AppDatabase, val auth0Api: A
     private val driversTable = TableQuery[Driver.Table]
 
     override def getAllBySupplier(supplierId: String): Future[List[Driver]] = for {
-        users <- auth0Api.listDrivers
+        //        users <- auth0Api.listDrivers
         drivers <- db.run {
             Actions.getDriversBySupplier(supplierId)
         }
-        ans = combineDetails(users, drivers)
-    } yield ans
+        //        ans = combineDetails(users, drivers)
+    } yield drivers
     import profile.api._
 
     override def delete(idx: String): Future[Boolean] = db.run {
@@ -99,7 +100,7 @@ class DriversRepositoryImpl @Inject()(val database: AppDatabase, val auth0Api: A
                 case Some(value) => DBIO.successful(value)
                 case _ => DBIO.failed(AmbigousResult("No such driver"))
             }
-            newDriver = Driver(driver.id, driver.name, driver.email, Option(vehicle.id), driver.supplierId)
+            newDriver = Driver(driver.id, driver.name, driver.email, driver.locationId, Option(vehicle.id), driver.supplierId)
             _ <- driversTable.insertOrUpdate(newDriver)
 
         } yield ()

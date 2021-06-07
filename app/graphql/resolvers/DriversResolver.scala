@@ -11,8 +11,8 @@ class DriversResolver @Inject() (driversRepository: DriversRepository, implicit 
 
     def drivers(supplierId: String): Future[List[Driver]] = driversRepository.getAllBySupplier(supplierId)
 
-    def addDriver(name: String, email: String, supplierId: String): Future[Driver] = driversRepository.create(
-        Driver(UUID.randomUUID().toString, name = name, email = email, vehicleId = null, supplierId = Option(supplierId))
+    def addDriver(name: String, email: String, address: String, supplierId: String): Future[Driver] = driversRepository.create(
+        Driver(UUID.randomUUID().toString, name = name, email = email, locationId = address, vehicleId = null, supplierId = Option(supplierId))
     )
 
     def findDriver(idx: String): Future[Option[Driver]] = driversRepository.find(idx)
