@@ -92,10 +92,10 @@ class DeliveryRouteRepositoryImpl @Inject()(
         }
     } yield result
 
-    override def addOrder(routeId: String, address: String): Future[DeliveryOrderModel] = for {
+    override def addOrder(routeId: String, address: String, name: String): Future[DeliveryOrderModel] = for {
         location <- getLocation(address)
         order <- db.run {
-            Actions.addOrder(routeId, location)
+            Actions.addOrder(routeId, location, name)
         }
     } yield order
 
@@ -131,9 +131,9 @@ class DeliveryRouteRepositoryImpl @Inject()(
             isDeleted = if (maybeDelete == 1) true else false
         } yield isDeleted
 
-        def addOrder(routeId: String, location: Location): DBIO[DeliveryOrderModel] = for {
+        def addOrder(routeId: String, location: Location, name: String): DBIO[DeliveryOrderModel] = for {
             locationId <- locationsTable.insertOrUpdate(location).map(_ => location.address)
-            order = DeliveryOrderModel(UUID.randomUUID().toString, routeId, locationId, None, None, None, None)
+            order = DeliveryOrderModel(UUID.randomUUID().toString, name, routeId, locationId, None, None, None, None)
             _ <- ordersTable.insertOrUpdate(order)
         } yield order
 

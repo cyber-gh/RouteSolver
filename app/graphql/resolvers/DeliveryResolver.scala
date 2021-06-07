@@ -19,7 +19,7 @@ class DeliveryResolver @Inject()(deliveryRouteRepository: DeliveryRouteRepositor
 
     def deleteRoute(routeId: String): Future[Boolean] = deliveryRouteRepository.deleteRoute(routeId)
 
-    def addOrder(routeId: String, address: String): Future[DeliveryOrderModel] = deliveryRouteRepository.addOrder(routeId, address)
+    def addOrder(routeId: String, address: String, name: String): Future[DeliveryOrderModel] = deliveryRouteRepository.addOrder(routeId, address, name)
 
     def deleteOrder(orderId: String): Future[Boolean] = deliveryRouteRepository.deleteOrder(orderId)
 

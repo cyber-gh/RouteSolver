@@ -13,7 +13,7 @@ trait DeliveryRouteRepository {
 
     def deleteRoute(routeId: String): Future[Boolean]
 
-    def addOrder(routeId: String, address: String): Future[DeliveryOrderModel]
+    def addOrder(routeId: String, address: String, name: String): Future[DeliveryOrderModel]
 
     def deleteOrder(orderId: String): Future[Boolean]
 

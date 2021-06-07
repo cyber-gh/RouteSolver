@@ -11,7 +11,7 @@ import java.sql.Timestamp
 
 case class DeliveryOrderModel(
                                  id: String,
-
+                                 name: String,
                                  routeId: String,
                                  locationId: String,
 
@@ -96,14 +96,16 @@ object DeliveryRouteModel extends ((String, String, String, String, DateTime, Ro
 }
 
 
-object DeliveryOrderModel extends ((String, String, String, Option[String], Option[String], Option[Double], Option[Double]) => DeliveryOrderModel) {
+object DeliveryOrderModel extends ((String, String, String, String, Option[String], Option[String], Option[Double], Option[Double]) => DeliveryOrderModel) {
     class Table(tag: SlickTag) extends SlickTable[DeliveryOrderModel](tag, "Orders") {
         lazy val routes = TableQuery[DeliveryRouteModel.Table]
         lazy val locations = TableQuery[Location.Table]
 
-        def * = (id, routeId, locationId, startTime, endTime, weight, volume) <> (DeliveryOrderModel.tupled, DeliveryOrderModel.unapply)
+        def * = (id, name, routeId, locationId, startTime, endTime, weight, volume) <> (DeliveryOrderModel.tupled, DeliveryOrderModel.unapply)
 
         def id = column[String]("id", O.PrimaryKey)
+
+        def name = column[String]("name")
 
         def locationId = column[String]("location_id")
 

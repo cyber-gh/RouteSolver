@@ -233,11 +233,13 @@ class DriversSchema @Inject()(
             tags = AuthPermission("modify:routes") :: Nil,
             arguments = List(
                 Argument("routeId", StringType),
-                Argument("address", StringType)
+                Argument("address", StringType),
+                Argument("name", StringType)
             ),
             resolve = ctx => deliveryResolver.addOrder(
                 ctx.args.arg[String]("routeId"),
-                ctx.args.arg[String]("address")
+                ctx.args.arg[String]("address"),
+                ctx.args.arg[String]("name")
             )
         ),
         Field(
