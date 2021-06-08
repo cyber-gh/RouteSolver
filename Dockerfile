@@ -12,7 +12,6 @@ RUN cd /tmp/build && \
 COPY . /root/app/
 WORKDIR /root/app
 RUN sbt compile && sbt test:compile
-RUN source .env
 
 EXPOSE 9000
 CMD ["sbt", "run"]

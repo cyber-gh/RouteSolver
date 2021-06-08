@@ -4,6 +4,12 @@ version := "1.0"
 
 lazy val `routesolver` = (project in file(".")).enablePlugins(PlayScala)
 
+javaOptions in Universal ++= Seq(
+    "-Dpidfile.path=/dev/null"
+)
+
+enablePlugins(DockerPlugin)
+
 resolvers += "scalaz-bintray" at "https://dl.bintray.com/scalaz/releases"
 
 resolvers += "Akka Snapshot Repository" at "https://repo.akka.io/snapshots/"
@@ -58,5 +64,9 @@ libraryDependencies ++= Seq(
 )
 
 unmanagedResourceDirectories in Test <+= baseDirectory(_ / "target/web/public/test")
+
+dockerBaseImage := "openjdk:11"
+packageName in Docker := "route-solver-backend"
+version in Docker := "latest"
 
       

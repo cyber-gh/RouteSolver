@@ -15,3 +15,5 @@ dist
 /.settings
 /project/project
 /.env
+/.env-linux
+publish.sh

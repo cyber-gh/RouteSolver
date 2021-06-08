@@ -49,9 +49,11 @@ class AuthService @Inject()(config: Configuration) {
 
     // Your Auth0 audience, read from configuration
     private def audience = config.get[String]("auth0.audience")
+//    private def audience = scala.util.Properties.envOrElse("AUTH0_AUDIENCE", "")
 
     private def issuer = s"https://$domain/"
 
     // Your Auth0 domain, read from configuration
     private def domain = config.get[String]("auth0.domain")
+    //    private def domain = scala.util.Properties.envOrElse("AUTH0_DOMAIN", "")
 }
