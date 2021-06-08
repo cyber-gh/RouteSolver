@@ -17,7 +17,6 @@ trait DeliveryRouteRepository {
 
     def deleteOrder(orderId: String): Future[Boolean]
 
-
     def getOrders(routeId: String): Future[List[DeliveryOrderModel]]
 
     def getOrder(orderId: String): Future[Option[DeliveryOrderModel]]
