@@ -40,7 +40,7 @@ class NearestNeighbourOptimizer @Inject()(
     override def optimize(start: Location, orders: List[DeliveryOrder]): Future[OptimizeSolution] = {
         val locations = List(start) ++ orders.map(_.location)
         return for {
-            distanceMatrix <- distanceRepository.getDistanceMatrix(locations)
+            distanceMatrix <- distanceRepository.getDistanceMatrix(locations).map(_.distances)
             optimizer = new NearestNeighbourAlg(distanceMatrix, locations.length)
             (ans, cost) = optimizer.run()
             finalOrders = ans.drop(1).zipWithIndex.map { case (o, idx) => (orders(o - 1), idx) }

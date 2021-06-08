@@ -21,18 +21,19 @@ class JspritOptimizer @Inject()(distanceRepository: DistanceRepository, implicit
     override def optimize(start: Location, orders: List[DeliveryOrder]): Future[OptimizeSolution] = {
         val locations = List(start) ++ orders.map(_.location)
         return for {
-            distanceMatrix <- distanceRepository.getDistanceMatrix(locations)
-            (ans, cost) = optimize(distanceMatrix, locations.length)
+            matrix <- distanceRepository.getDistanceMatrix(locations)
+            (ans, cost) = optimize(matrix.distances, matrix.travelTimes, locations.length)
             finalOrders = ans.zipWithIndex.map { case (o, idx) => (orders(o - 1), idx) }
             sortedOrders = finalOrders.sortBy { case (order, idx) => idx }
             sol = OptimizeSolution(sortedOrders, cost)
         } yield sol
     }
 
-    private def optimize(matrix: Array[Array[Double]], nr: Int): (List[Int], Double) = {
+    private def optimize(distances: Array[Array[Double]], travelTimes: Array[Array[Double]], nr: Int): (List[Int], Double) = {
         import com.graphhopper.jsprit.core.problem.vehicle.{VehicleImpl, VehicleTypeImpl}
         val typeBuilder = VehicleTypeImpl.Builder.newInstance("vehicle-type")
         typeBuilder.setCostPerDistance(1.0)
+        typeBuilder.setCostPerTransportTime(0.0)
         val bigType = typeBuilder.build
 
         val vehicleBuilder = VehicleImpl.Builder.newInstance("vehicle")
@@ -48,7 +49,7 @@ class JspritOptimizer @Inject()(distanceRepository: DistanceRepository, implicit
         val matrixBuilder = FastVehicleRoutingTransportCostsMatrix.Builder.newInstance(nr, false)
         for (x <- 0 until nr) {
             for (y <- 0 until nr) {
-                matrixBuilder.addTransportDistance(x, y, matrix(x)(y))
+                matrixBuilder.addTransportDistance(x, y, distances(x)(y))
             }
         }
         vrpBuilder.setRoutingCost(matrixBuilder.build())

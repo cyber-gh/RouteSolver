@@ -7,13 +7,20 @@ import scala.concurrent.Future
 
 class DirectDistanceRepository @Inject() extends DistanceRepository {
 
-    override def getDistanceMatrix(locations: List[Location]): Future[Array[Array[Double]]] = Future.successful(
-        locations.map(x => {
+
+    override def getDistanceMatrix(locations: List[Location]): Future[TimeDistanceResponse] = Future.successful(
+        calculate(locations)
+    )
+
+    private def calculate(locations: List[Location]): TimeDistanceResponse = {
+        val distance = locations.map(x => {
             locations.map(y => {
                 distanceBetween(x, y)
             }).toArray
         }).toArray
-    )
+        val time = distance.map(row => row.map(x => x / averageSpeed))
+        TimeDistanceResponse(distance, time)
+    }
 
     private def distanceBetween(a: Location, b: Location): Double = {
         val R = 6371e3

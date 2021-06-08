@@ -5,5 +5,7 @@ import models.Location
 import scala.concurrent.Future
 
 trait DistanceRepository {
-    def getDistanceMatrix(locations: List[Location]): Future[Array[Array[Double]]]
+    protected val averageSpeed: Double = 70.0
+
+    def getDistanceMatrix(locations: List[Location]): Future[TimeDistanceResponse]
 }

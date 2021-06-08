@@ -15,12 +15,12 @@ class MapboxDistanceRepository @Inject()(
 
     private val apiKey: String = scala.util.Properties.envOrElse("MAPBOX_API_KEY", "")
 
-    override def getDistanceMatrix(locations: List[Location]): Future[Array[Array[Double]]] = {
+    override def getDistanceMatrix(locations: List[Location]): Future[TimeDistanceResponse] = {
         if (locations.length <= 10) getRemoteDistance(locations)
         else directDistanceRepository.getDistanceMatrix(locations)
     }
 
-    private def getRemoteDistance(locations: List[Location]): Future[Array[Array[Double]]] = Future {
+    private def getRemoteDistance(locations: List[Location]): Future[TimeDistanceResponse] = Future {
         val points = locations.map(_.toPoint).asJava
         val req = MapboxMatrix.builder()
             .accessToken(apiKey)
@@ -35,7 +35,9 @@ class MapboxDistanceRepository @Inject()(
         //        }
         val javaMatrix = ans.body().durations().asScala.toArray.map(x => x.map(_.doubleValue()))
 
-        javaMatrix
+        val time = javaMatrix
+        val distance = javaMatrix.map(row => row.map(x => averageSpeed * x))
+        TimeDistanceResponse(distance, time)
     }
 
     implicit class PointConverter(location: Location) {
