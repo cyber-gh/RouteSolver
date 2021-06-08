@@ -26,9 +26,14 @@ class MapboxDistanceRepository @Inject()(
             .accessToken(apiKey)
             .profile(DirectionsCriteria.PROFILE_DRIVING)
             .coordinates(points)
+
             .build()
         val ans = req.executeCall()
-        val javaMatrix = ans.body().distances().asScala.toArray.map(x => x.map(_.doubleValue()))
+        //        throw ExternalApiError(ans.body().toString)
+        //        if (ans.body().distances() == null) {
+        //            throw ExternalApiError("Unable to get distance matrix")
+        //        }
+        val javaMatrix = ans.body().durations().asScala.toArray.map(x => x.map(_.doubleValue()))
 
         javaMatrix
     }

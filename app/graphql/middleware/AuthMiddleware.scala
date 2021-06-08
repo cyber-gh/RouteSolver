@@ -30,7 +30,7 @@ object AuthMiddleware extends Middleware[MyContext] with MiddlewareBeforeField[M
 
 case class AuthenticationException(message: String) extends Exception(message)
 
-case class AuthorizationException(message: String) extends Exception(message)
+case class AuthorizationException(message: String) extends Exception(message) with UserFacingError
 
 
 case class UserDetails(userId: String, userPermissions: List[String])

@@ -7,7 +7,7 @@ import models.VRPAlg.VRPAlg
 import models._
 import repositories.directions.DirectionsRepository
 import repositories.routes.{DeliveryRouteRepository, LocationRepository}
-import repositories.solver.optimizer.{BasicRouteOptimizer, NearestNeighbourOptimizer}
+import repositories.solver.optimizer.{BasicRouteOptimizer, JspritOptimizer, NearestNeighbourOptimizer}
 import slick.lifted.TableQuery
 
 import java.util.UUID
@@ -17,6 +17,7 @@ class RouteSolutionManagerImpl @Inject()(
                                             private val deliveryRouteRepository: DeliveryRouteRepository,
                                             private val backtrackOptimizer: BasicRouteOptimizer,
                                             private val nnOptimizer: NearestNeighbourOptimizer,
+                                            private val jspritOptimizer: JspritOptimizer,
                                             private val locationRepository: LocationRepository,
                                             private val directionsRepository: DirectionsRepository,
                                             private val database: AppDatabase,
@@ -65,7 +66,7 @@ class RouteSolutionManagerImpl @Inject()(
             _ <- db.run {
                 Actions.updateRouteSolution(routeId, solutionId)
             }
-            _ <- setDirections(route.get, solution.get)
+            //            _ <- setDirections(route.get, solution.get)
         } yield ()
         else Future.successful(None)
     } yield solution
@@ -95,6 +96,8 @@ class RouteSolutionManagerImpl @Inject()(
                 }
             } yield sol
         }
+        route <- deliveryRouteRepository.getRoute(routeId)
+        _ <- setDirections(route.get, ans)
 
 
     } yield ans
@@ -109,6 +112,7 @@ class RouteSolutionManagerImpl @Inject()(
             optimizer = algorithm match {
                 case VRPAlg.backtrack => backtrackOptimizer
                 case VRPAlg.nearestNeighbour => nnOptimizer
+                case VRPAlg.greedySchrimp => jspritOptimizer
             }
             fullSolution <- optimizer.optimize(startLocation, fullOrders)
 
@@ -142,6 +146,7 @@ class RouteSolutionManagerImpl @Inject()(
             {
                 case "backtrack" => VRPAlg.backtrack
                 case "nearest_neighbour" => VRPAlg.nearestNeighbour
+                case "GreedySchrimp" => VRPAlg.greedySchrimp
                 case _ => VRPAlg.unknown
             }
         )

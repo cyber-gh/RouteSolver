@@ -17,3 +17,8 @@ case class EntityNotFound(msg: String) extends Exception with UserFacingError {
 case class OperationNotPermitted(msg: String) extends Exception with UserFacingError {
     override def getMessage: String = msg
 }
+
+case class ExternalApiError(msg: String) extends Exception with UserFacingError {
+    override def getMessage: String = msg
+}
+

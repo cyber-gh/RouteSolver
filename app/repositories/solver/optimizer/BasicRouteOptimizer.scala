@@ -1,6 +1,7 @@
 package repositories.solver.optimizer
 
 import com.google.inject.Inject
+import errors.OperationNotPermitted
 import models.Location
 import repositories.solver.distance.DistanceRepository
 import repositories.solver.utility.{DeliveryOrder, OptimizeSolution}
@@ -26,6 +27,7 @@ class BacktrackAlgorithm(val distanceMatrix: Array[Array[Double]], val nr: Int) 
 class BasicRouteOptimizer @Inject()(distanceRepository: DistanceRepository, implicit val executionContext: ExecutionContext) extends RouteOptimizer {
     override def optimize(start: Location, orders: List[DeliveryOrder]): Future[OptimizeSolution] = {
         val locations = List(start) ++ orders.map(_.location)
+        if (locations.length > 10) return Future.failed(OperationNotPermitted("Cannot apply backtarck for more than 10 orders"))
         return for {
             distanceMatrix <- distanceRepository.getDistanceMatrix(locations)
             optimizer = new BacktrackAlgorithm(distanceMatrix, locations.length)

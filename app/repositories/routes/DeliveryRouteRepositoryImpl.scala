@@ -24,6 +24,7 @@ class DeliveryRouteRepositoryImpl @Inject()(
     private val routesTable = TableQuery[models.DeliveryRouteModel.Table]
     private val ordersTable = TableQuery[models.DeliveryOrderModel.Table]
     private val locationsTable = TableQuery[models.Location.Table]
+    private val solutionsTable = TableQuery[models.RouteSolution.Table]
 
     override def getRoutes(supplierId: String): Future[List[DeliveryRouteModel]] = db.run {
         Actions.getRoutes(supplierId)
@@ -99,9 +100,20 @@ class DeliveryRouteRepositoryImpl @Inject()(
         }
     } yield order
 
-    override def deleteOrder(orderId: String): Future[Boolean] = db.run {
-        Actions.deleteOrder(orderId)
-    }
+    override def deleteOrder(orderId: String): Future[Boolean] = for {
+        maybeOrder <- getOrder(orderId)
+        order <- maybeOrder match {
+            case Some(value) => Future.successful(value)
+            case None => Future.failed(EntityNotFound(s"No such order ${orderId}"))
+        }
+        hasSolutions <- db.run {
+            Actions.hasSolutions(order.routeId)
+        }
+        _ <- if (hasSolutions) throw OperationNotPermitted("You must delete all the solutions first")
+        else db.run {
+            Actions.deleteOrder(orderId)
+        }
+    } yield true
 
     override def getOrders(routeId: String): Future[List[DeliveryOrderModel]] = db.run {
         Actions.getOrders(routeId)
@@ -155,5 +167,9 @@ class DeliveryRouteRepositoryImpl @Inject()(
         def getRoutes(supplierId: String): DBIO[List[DeliveryRouteModel]] = for {
             routes <- routesTable.filter(_.supplierId === supplierId).result
         } yield routes.toList
+
+        def hasSolutions(routeId: String): DBIO[Boolean] = for {
+            solutions <- solutionsTable.filter(_.routeId === routeId).length.result
+        } yield solutions > 0
     }
 }
