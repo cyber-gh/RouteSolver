@@ -12,6 +12,7 @@ object VRPAlg extends Enumeration {
     val backtrack = Value("backtrack")
     val nearestNeighbour = Value("nearest_neighbour")
     val greedySchrimp = Value("GreedySchrimp")
+    val Christofides = Value("Christofides")
     val unknown = Value("unknown")
 }
 
@@ -74,6 +75,7 @@ object RouteSolution extends ((String, String, Option[String], VRPAlg, Int, Doub
             case "backtrack" => VRPAlg.backtrack
             case "nearest_neighbour" => VRPAlg.nearestNeighbour
             case "GreedySchrimp" => VRPAlg.greedySchrimp
+            case "Christofides" => VRPAlg.Christofides
             case _ => VRPAlg.unknown
         }
     )

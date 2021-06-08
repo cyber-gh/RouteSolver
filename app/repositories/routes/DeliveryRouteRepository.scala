@@ -1,6 +1,6 @@
 package repositories.routes
 
-import models.{DeliveryOrderModel, DeliveryRouteModel}
+import models.{DeliveryOrderInputForm, DeliveryOrderModel, DeliveryRouteModel}
 
 import scala.concurrent.Future
 
@@ -20,4 +20,8 @@ trait DeliveryRouteRepository {
     def getOrders(routeId: String): Future[List[DeliveryOrderModel]]
 
     def getOrder(orderId: String): Future[Option[DeliveryOrderModel]]
+
+    def addOrder(orderForm: DeliveryOrderInputForm): Future[DeliveryOrderModel]
+
+    def addOrderByClient(routeId: String, clientId: String): Future[DeliveryOrderModel]
 }

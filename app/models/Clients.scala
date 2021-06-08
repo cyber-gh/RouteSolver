@@ -3,17 +3,7 @@ package models
 import slick.jdbc.MySQLProfile.api.{Table => SlickTable, _}
 import slick.lifted.{Tag => SlickTag}
 
-case class DeliveryClientInputForm(
-                                      name: String,
-                                      email: String,
-                                      address: String,
 
-                                      startTime: Option[String],
-                                      endTime: Option[String],
-
-                                      weight: Option[Double],
-                                      volume: Option[Double]
-                                  )
 
 case class DeliveryClient(
                              id: String,

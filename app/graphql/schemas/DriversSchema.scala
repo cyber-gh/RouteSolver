@@ -25,6 +25,10 @@ class DriversSchema @Inject()(
     val DeliveryClientInputType: InputObjectType[DeliveryClientInputForm] = deriveInputObjectType[DeliveryClientInputForm]()
     val DeliveryClientArg = Argument("client", DeliveryClientInputType)
 
+    implicit val orderInputFormat = jsonFormat8(DeliveryOrderInputForm)
+    val DeliveryOrderInputType = deriveInputObjectType[DeliveryOrderInputForm]()
+    val DeliveryOrderInputArg = Argument("order", DeliveryOrderInputType)
+
     implicit val GraphQLDateTime = ScalarType[DateTime]( //1
         "DateTime", //2
         coerceOutput = (dt, _) => dt.toString, //3
@@ -242,6 +246,29 @@ class DriversSchema @Inject()(
                 ctx.args.arg[String]("name")
             )
         ),
+
+        Field(
+            name = "addDetailedOrder",
+            fieldType = DeliveryOrderType,
+            tags = AuthPermission("modify:routes") :: Nil,
+            arguments = DeliveryOrderInputArg :: Nil,
+            resolve = ctx => deliveryResolver.addOrder(ctx.arg(DeliveryOrderInputArg))
+        ),
+
+        Field(
+            name = "addOrderByClient",
+            fieldType = DeliveryOrderType,
+            tags = AuthPermission("modify:routes") :: Nil,
+            arguments = List(
+                Argument("routeId", StringType),
+                Argument("clientId", StringType)
+            ),
+            resolve = ctx => deliveryResolver.addOrderByClient(
+                ctx.args.arg[String]("routeId"),
+                ctx.args.arg[String]("clientId")
+            )
+        ),
+
         Field(
             name = "deleteOrder",
             fieldType = BooleanType,

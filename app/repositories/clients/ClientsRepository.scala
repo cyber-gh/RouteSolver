@@ -21,5 +21,7 @@ trait ClientsRepository {
 
     def getClients(supplierId: String): Future[List[DeliveryClient]]
 
+    def getClient(idx: String): Future[Option[DeliveryClient]]
+
     def delete(idx: String): Future[Boolean]
 }

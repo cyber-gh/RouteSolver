@@ -55,6 +55,10 @@ class ClientsRepositoryImpl @Inject()(val database: AppDatabase,
         Actions.deleteClient(idx)
     }
 
+    override def getClient(idx: String): Future[Option[DeliveryClient]] = db.run {
+        Actions.getClient(idx)
+    }
+
     import profile.api._
 
     object Actions {
@@ -65,6 +69,8 @@ class ClientsRepositoryImpl @Inject()(val database: AppDatabase,
         def getClients(supplierId: String): DBIO[List[DeliveryClient]] = for {
             clients <- clientsTable.filter(_.supplierId === supplierId).result
         } yield clients.toList
+
+        def getClient(idx: String) = clientsTable.filter(_.id === idx).result.headOption
 
         def deleteClient(idx: String): DBIO[Boolean] = for {
             maybeDeleted <- clientsTable.filter(_.id === idx).delete

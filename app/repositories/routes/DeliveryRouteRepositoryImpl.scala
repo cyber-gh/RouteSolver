@@ -4,7 +4,7 @@ import akka.http.scaladsl.model.DateTime
 import com.google.inject.Inject
 import database.AppDatabase
 import errors.{EntityNotFound, OperationNotPermitted}
-import models.{DeliveryOrderModel, DeliveryRouteModel, Location, RouteState}
+import models._
 import repositories.geocoding.GeocodingRepository
 import slick.lifted.TableQuery
 
@@ -14,6 +14,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class DeliveryRouteRepositoryImpl @Inject()(
                                                val database: AppDatabase,
                                                val geocoding: GeocodingRepository,
+                                               //                                               val clientsRepository: ClientsRepository,
                                                implicit val executionContext: ExecutionContext
                                            ) extends DeliveryRouteRepository with LocationRepository {
     val profile = database.profile
@@ -79,6 +80,32 @@ class DeliveryRouteRepositoryImpl @Inject()(
         Actions.getRoute(idx)
     }
 
+    override def addOrderByClient(routeId: String, clientId: String): Future[DeliveryOrderModel] = ???
+    //    for {
+    //        maybeClient <- clientsRepository.getClient(clientId)
+    //        client <- maybeClient match {
+    //            case Some(value) => Future.successful(value)
+    //            case None => Future.failed(EntityNotFound(s"No such client ${clientId}"))
+    //        }
+    //        o <- db.run{
+    //            Actions.addOrder(
+    //               DeliveryOrderModel(
+    //                   UUID.randomUUID().toString,
+    //                   client.name,
+    //                   routeId,
+    //                   client.locationId,
+    //                   Some(clientId),
+    //                   client.startTime,
+    //                   client.endTime,
+    //                   client.weight,
+    //                   client.volume
+    //
+    //               )
+    //
+    //            )
+    //        }
+    //    } yield o
+
     override def deleteRoute(routeId: String): Future[Boolean] = for {
         maybeRoute <- getRoute(routeId)
         route <- maybeRoute match {
@@ -93,10 +120,35 @@ class DeliveryRouteRepositoryImpl @Inject()(
         }
     } yield result
 
+    override def addOrder(orderForm: DeliveryOrderInputForm): Future[DeliveryOrderModel] = for {
+        location <- getLocation(orderForm.address)
+        order <- db.run {
+            Actions.addOrder(
+                DeliveryOrderModel(UUID.randomUUID().toString,
+                    orderForm.name,
+                    orderForm.routeId,
+                    location.address,
+                    orderForm.clientId,
+                    orderForm.startTime,
+                    orderForm.endTime,
+                    orderForm.weight,
+                    orderForm.volume
+                )
+            )
+        }
+    } yield order
+
     override def addOrder(routeId: String, address: String, name: String): Future[DeliveryOrderModel] = for {
         location <- getLocation(address)
         order <- db.run {
-            Actions.addOrder(routeId, location, name)
+            Actions.addOrder(
+                DeliveryOrderModel(UUID.randomUUID().toString,
+                    name,
+                    routeId,
+                    location.address,
+                    None, None, None, None, None
+                )
+            )
         }
     } yield order
 
@@ -143,9 +195,7 @@ class DeliveryRouteRepositoryImpl @Inject()(
             isDeleted = if (maybeDelete == 1) true else false
         } yield isDeleted
 
-        def addOrder(routeId: String, location: Location, name: String): DBIO[DeliveryOrderModel] = for {
-            locationId <- locationsTable.insertOrUpdate(location).map(_ => location.address)
-            order = DeliveryOrderModel(UUID.randomUUID().toString, name, routeId, locationId, None, None, None, None)
+        def addOrder(order: DeliveryOrderModel): DBIO[DeliveryOrderModel] = for {
             _ <- ordersTable.insertOrUpdate(order)
         } yield order
 

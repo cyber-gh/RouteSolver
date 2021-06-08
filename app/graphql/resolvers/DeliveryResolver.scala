@@ -1,7 +1,7 @@
 package graphql.resolvers
 
 import com.google.inject.Inject
-import models.{DeliveryOrderModel, DeliveryRouteModel, Location}
+import models.{DeliveryOrderInputForm, DeliveryOrderModel, DeliveryRouteModel, Location}
 import repositories.routes.{DeliveryRouteRepository, LocationRepository}
 
 import scala.concurrent.Future
@@ -30,4 +30,9 @@ class DeliveryResolver @Inject()(deliveryRouteRepository: DeliveryRouteRepositor
 
     def getLocation(address: String): Future[Location] = locationRepository.getLocation(address)
 
+
+    def addOrder(orderForm: DeliveryOrderInputForm): Future[DeliveryOrderModel] = deliveryRouteRepository.addOrder(orderForm)
+
+
+    def addOrderByClient(routeId: String, clientId: String): Future[DeliveryOrderModel] = deliveryRouteRepository.addOrderByClient(routeId, clientId)
 }
