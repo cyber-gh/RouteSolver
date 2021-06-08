@@ -14,5 +14,5 @@ WORKDIR /root/app
 RUN sbt compile && sbt test:compile
 RUN source .env
 
-EXPOSE 9001
-CMD ["sbt"]
+EXPOSE 9000
+CMD ["sbt", "run"]

@@ -1,0 +1,19 @@
+version: '3.1'
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "9000:9000"
+    networks:
+      - main-network
+    env_file:
+      - .env
+
+
+
+networks:
+  main-network:
+    driver: bridge
