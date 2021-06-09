@@ -69,7 +69,7 @@ class DriversSchema @Inject()(
         ReplaceField("locationId",
             Field("location", LocationType, resolve = it => deliveryResolver.getLocation(it.value.locationId))
         ),
-        ExcludeFields("routeId")
+        ExcludeFields("routeId", "clientId")
     )
     implicit lazy val DeliveryRouteType: ObjectType[Unit, DeliveryRouteModel] = deriveObjectType[Unit, DeliveryRouteModel](
         Interfaces(IdentifiableType),
