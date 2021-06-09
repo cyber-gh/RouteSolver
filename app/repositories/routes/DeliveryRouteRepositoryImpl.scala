@@ -5,18 +5,19 @@ import com.google.inject.Inject
 import database.AppDatabase
 import errors.{EntityNotFound, OperationNotPermitted}
 import models._
-import repositories.geocoding.GeocodingRepository
+import repositories.clients.ClientsRepository
+import repositories.locations.LocationRepository
 import slick.lifted.TableQuery
 
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
 class DeliveryRouteRepositoryImpl @Inject()(
-                                               val database: AppDatabase,
-                                               val geocoding: GeocodingRepository,
-                                               //                                               val clientsRepository: ClientsRepository,
+                                               database: AppDatabase,
+                                               locationRepository: LocationRepository,
+                                               clientsRepository: ClientsRepository,
                                                implicit val executionContext: ExecutionContext
-                                           ) extends DeliveryRouteRepository with LocationRepository {
+                                           ) extends DeliveryRouteRepository {
     val profile = database.profile
     /**
      * Specific database profile
@@ -31,19 +32,9 @@ class DeliveryRouteRepositoryImpl @Inject()(
         Actions.getRoutes(supplierId)
     }
 
-    override def getLocations(addresses: List[String]): Future[List[Location]] =
-        Future.sequence(addresses.map(x => getLocation(x)))
-
-    override def getLocation(lat: Double, lng: Double): Future[Location] = for {
-        address <- geocoding.revGeocode(lat, lng)
-        location = Location(address, lat, lng)
-        _ <- db.run {
-            Actions.addLocation(location)
-        }
-    } yield location
 
     override def addRoute(supplierId: String, name: String, startAddress: String, roundTrip: Boolean): Future[DeliveryRouteModel] = for {
-        location <- getLocation(startAddress)
+        location <- locationRepository.getLocation(startAddress)
         route <- db.run {
             Actions.addRoute(
                 DeliveryRouteModel(UUID.randomUUID().toString,
@@ -60,51 +51,35 @@ class DeliveryRouteRepositoryImpl @Inject()(
         }
     } yield route
 
-    override def getLocation(address: String): Future[Location] = for {
-        cachedLocation <- db.run {
-            Actions.getLocation(address)
-        }
-        t <- cachedLocation match {
-            case Some(value) => Future.successful(value)
-            case None => for {
-                (lat, lng) <- geocoding.geocode(address)
-                l = Location(address, lat, lng)
-                _ <- db.run {
-                    Actions.addLocation(l)
-                }
-            } yield l
-        }
-    } yield t
 
     override def getRoute(idx: String): Future[Option[DeliveryRouteModel]] = db.run {
         Actions.getRoute(idx)
     }
 
-    override def addOrderByClient(routeId: String, clientId: String): Future[DeliveryOrderModel] = ???
-    //    for {
-    //        maybeClient <- clientsRepository.getClient(clientId)
-    //        client <- maybeClient match {
-    //            case Some(value) => Future.successful(value)
-    //            case None => Future.failed(EntityNotFound(s"No such client ${clientId}"))
-    //        }
-    //        o <- db.run{
-    //            Actions.addOrder(
-    //               DeliveryOrderModel(
-    //                   UUID.randomUUID().toString,
-    //                   client.name,
-    //                   routeId,
-    //                   client.locationId,
-    //                   Some(clientId),
-    //                   client.startTime,
-    //                   client.endTime,
-    //                   client.weight,
-    //                   client.volume
-    //
-    //               )
-    //
-    //            )
-    //        }
-    //    } yield o
+    override def addOrderByClient(routeId: String, clientId: String): Future[DeliveryOrderModel] = for {
+        maybeClient <- clientsRepository.getClient(clientId)
+        client <- maybeClient match {
+            case Some(value) => Future.successful(value)
+            case None => Future.failed(EntityNotFound(s"No such client ${clientId}"))
+        }
+        o <- db.run {
+            Actions.addOrder(
+                DeliveryOrderModel(
+                    UUID.randomUUID().toString,
+                    client.name,
+                    routeId,
+                    client.locationId,
+                    Some(clientId),
+                    client.startTime,
+                    client.endTime,
+                    client.weight,
+                    client.volume
+
+                )
+
+            )
+        }
+    } yield o
 
     override def deleteRoute(routeId: String): Future[Boolean] = for {
         maybeRoute <- getRoute(routeId)
@@ -121,7 +96,7 @@ class DeliveryRouteRepositoryImpl @Inject()(
     } yield result
 
     override def addOrder(orderForm: DeliveryOrderInputForm): Future[DeliveryOrderModel] = for {
-        location <- getLocation(orderForm.address)
+        location <- locationRepository.getLocation(orderForm.address)
         order <- db.run {
             Actions.addOrder(
                 DeliveryOrderModel(UUID.randomUUID().toString,
@@ -139,7 +114,7 @@ class DeliveryRouteRepositoryImpl @Inject()(
     } yield order
 
     override def addOrder(routeId: String, address: String, name: String): Future[DeliveryOrderModel] = for {
-        location <- getLocation(address)
+        location <- locationRepository.getLocation(address)
         order <- db.run {
             Actions.addOrder(
                 DeliveryOrderModel(UUID.randomUUID().toString,
@@ -178,13 +153,6 @@ class DeliveryRouteRepositoryImpl @Inject()(
     import profile.api._
 
     object Actions {
-        def addLocation(location: Location): DBIO[Location] = for {
-            inserted <- locationsTable.insertOrUpdate(location).map(_ => location)
-        } yield inserted
-
-        def getLocation(id: String): DBIO[Option[Location]] = for {
-            location <- locationsTable.filter(_.address === id).result.headOption
-        } yield location
 
         def getOrders(routeId: String): DBIO[List[DeliveryOrderModel]] = for {
             orders <- ordersTable.filter(_.routeId === routeId).result

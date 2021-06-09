@@ -1,4 +1,4 @@
-package repositories.routes
+package repositories.locations
 
 import models.Location
 

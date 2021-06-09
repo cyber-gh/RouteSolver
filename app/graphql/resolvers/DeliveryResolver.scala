@@ -2,13 +2,14 @@ package graphql.resolvers
 
 import com.google.inject.Inject
 import models.{DeliveryOrderInputForm, DeliveryOrderModel, DeliveryRouteModel, Location}
-import repositories.routes.{DeliveryRouteRepository, LocationRepository}
+import repositories.locations.LocationRepository
+import repositories.routes.DeliveryRouteRepository
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
 //TODO add permissions checks
-class DeliveryResolver @Inject()(deliveryRouteRepository: DeliveryRouteRepository, locationRepository: LocationRepository) {
+class DeliveryResolver @Inject()(deliveryRouteRepository: DeliveryRouteRepository, locationRepository: LocationRepository, implicit val executionContext: ExecutionContext) {
 
     def getRoutes(supplierId: String): Future[List[DeliveryRouteModel]] = deliveryRouteRepository.getRoutes(supplierId)
 
@@ -33,6 +34,7 @@ class DeliveryResolver @Inject()(deliveryRouteRepository: DeliveryRouteRepositor
 
     def addOrder(orderForm: DeliveryOrderInputForm): Future[DeliveryOrderModel] = deliveryRouteRepository.addOrder(orderForm)
 
-
     def addOrderByClient(routeId: String, clientId: String): Future[DeliveryOrderModel] = deliveryRouteRepository.addOrderByClient(routeId, clientId)
+
+    def addOrdersByClients(routeId: String, clientIds: List[String]): Future[List[DeliveryOrderModel]] = Future.sequence(clientIds.map(it => addOrderByClient(routeId, it)))
 }

@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import database.AppDatabase
 import models.DeliveryClient
 import repositories.geocoding.GeocodingRepository
-import repositories.routes.LocationRepository
+import repositories.locations.LocationRepository
 import slick.lifted.TableQuery
 
 import java.util.UUID
@@ -70,7 +70,7 @@ class ClientsRepositoryImpl @Inject()(val database: AppDatabase,
             clients <- clientsTable.filter(_.supplierId === supplierId).result
         } yield clients.toList
 
-        def getClient(idx: String) = clientsTable.filter(_.id === idx).result.headOption
+        def getClient(idx: String): DBIO[Option[DeliveryClient]] = clientsTable.filter(_.id === idx).result.headOption
 
         def deleteClient(idx: String): DBIO[Boolean] = for {
             maybeDeleted <- clientsTable.filter(_.id === idx).delete

@@ -1,11 +1,11 @@
 package graphql
 
+import com.google.inject.Inject
 import graphql.middleware.{AuthorizationException, UserDetails}
 import graphql.schemas.DriversSchema
 import sangria.execution.{HandledException, ExceptionHandler => EHandler}
 import sangria.schema.{ObjectType, fields}
 
-import javax.inject.Inject
 
 class GraphQL @Inject()(driversSchema: DriversSchema) {
 

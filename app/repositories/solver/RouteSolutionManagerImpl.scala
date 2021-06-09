@@ -6,7 +6,8 @@ import database.AppDatabase
 import models.VRPAlg.VRPAlg
 import models._
 import repositories.directions.DirectionsRepository
-import repositories.routes.{DeliveryRouteRepository, LocationRepository}
+import repositories.locations.LocationRepository
+import repositories.routes.DeliveryRouteRepository
 import repositories.solver.optimizer.{BasicRouteOptimizer, ChristofidesOptimizer, JspritOptimizer, NearestNeighbourOptimizer}
 import slick.lifted.TableQuery
 

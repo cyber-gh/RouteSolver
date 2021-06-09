@@ -8,6 +8,7 @@ import pdi.jwt.JwtClaim
 import play.api.http.HeaderNames
 import play.api.libs.json._
 import play.api.mvc._
+import repositories.auth0.Auth0Management
 import sangria.ast.Document
 import sangria.execution._
 import sangria.marshalling.playJson._
@@ -17,7 +18,7 @@ import services.AuthService
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-class AppController @Inject()(graphQL: GraphQL, cc: ControllerComponents, authService: AuthService, authAction: AuthAction,
+class AppController @Inject()(graphQL: GraphQL, cc: ControllerComponents, authService: AuthService, authAction: AuthAction, auth0Management: Auth0Management,
                               implicit val executionContext: ExecutionContext) extends AbstractController(cc) {
 
     private val authEnabled: Boolean = true
@@ -127,6 +128,7 @@ class AppController @Inject()(graphQL: GraphQL, cc: ControllerComponents, authSe
     }
 
     private def hasErrors(js: JsValue): Boolean = {
+        return false
         val t = js \ "errors" \ 0 \ "message"
         val msg = t.asOpt[String].getOrElse("")
         return msg == "You don't have the required permissions"
@@ -134,8 +136,20 @@ class AppController @Inject()(graphQL: GraphQL, cc: ControllerComponents, authSe
 
     private def permissions(claim: JwtClaim): List[String] = (Json.parse(claim.content) \ "permissions").asOpt[List[String]].getOrElse(List())
 
-    def ping = authAction { implicit request =>
-        Ok(request.jwt.content)
+    def ping: Action[AnyContent] = Action.async { implicit request =>
+
+        //        Future.successful(Ok("Nothing"))
+
+        extractBearerToken(request) map { token =>
+            authService.validateJwt(token) match {
+                case Success(claim) => for {
+                    _ <- if (true) auth0Management.ensureSupplierPermissions(claim.subject.get) else Future.successful(true)
+                    //                  result = Ok(claim.content)
+                } yield Ok(claim.content)
+                case Failure(t) => Future.successful(Results.Unauthorized(t.getMessage)) // token was invalid - return 401
+            }
+        } getOrElse Future.successful(Results.Unauthorized)
+
     }
 
 }

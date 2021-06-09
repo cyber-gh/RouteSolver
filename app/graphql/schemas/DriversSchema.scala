@@ -7,6 +7,7 @@ import graphql.middleware.AuthPermission
 import graphql.resolvers.{DeliveryResolver, DeliverySolutionResolver, DriversResolver}
 import models.VRPAlg.VRPAlg
 import models._
+import repositories.auth0.Auth0Management
 import repositories.clients.ClientsRepository
 import sangria.ast.StringValue
 import sangria.macros.derive._
@@ -18,7 +19,8 @@ class DriversSchema @Inject()(
                                  driversResolver: DriversResolver,
                                  clientsResolver: ClientsRepository,
                                  deliveryResolver: DeliveryResolver,
-                                 deliverySolutionResolver: DeliverySolutionResolver) {
+                                 deliverySolutionResolver: DeliverySolutionResolver,
+                                 permissionManager: Auth0Management) {
 
 
     implicit val clientFormat = jsonFormat7(DeliveryClientInputForm)
@@ -257,15 +259,15 @@ class DriversSchema @Inject()(
 
         Field(
             name = "addOrderByClient",
-            fieldType = DeliveryOrderType,
+            fieldType = ListType(DeliveryOrderType),
             tags = AuthPermission("modify:routes") :: Nil,
             arguments = List(
                 Argument("routeId", StringType),
-                Argument("clientId", StringType)
+                Argument("clientIds", ListInputType(StringType))
             ),
-            resolve = ctx => deliveryResolver.addOrderByClient(
+            resolve = ctx => deliveryResolver.addOrdersByClients(
                 ctx.args.arg[String]("routeId"),
-                ctx.args.arg[String]("clientId")
+                ctx.args.arg[List[String]]("clientIds")
             )
         ),
 
@@ -306,6 +308,15 @@ class DriversSchema @Inject()(
                 ctx => deliverySolutionResolver.getSolutions(ctx.arg(Id))
         )
     )
+
+    private val OtherMutations: List[Field[MyContext, Unit]] = List(
+        Field(
+            name = "addSupplierPermissions",
+            fieldType = BooleanType,
+            resolve = ctx => permissionManager.ensureSupplierPermissions(ctx.ctx.userDetails.userId)
+        )
+    )
+
     private val DeliverySolutionMutations: List[Field[MyContext, Unit]] = List(
         Field(
             name = "solveRoute",
@@ -362,6 +373,6 @@ class DriversSchema @Inject()(
     )
 
     val Queries: List[Field[MyContext, Unit]] = ClientsQueries ++ DriversQueries ++ DeliveryQueries ++ DeliverySolutionQueries
-    val Mutations: List[Field[MyContext, Unit]] = DriversMutations ++ ClientsMutations ++ DeliveryMutations ++ DeliverySolutionMutations
+    val Mutations: List[Field[MyContext, Unit]] = DriversMutations ++ ClientsMutations ++ DeliveryMutations ++ DeliverySolutionMutations ++ OtherMutations
 
 }

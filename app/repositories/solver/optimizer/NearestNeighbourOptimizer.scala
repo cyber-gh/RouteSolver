@@ -7,7 +7,6 @@ import repositories.solver.utility.{DeliveryOrder, OptimizeSolution}
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.control.Breaks.break
 
 
 class NearestNeighbourAlg(val distanceMatrix: Array[Array[Double]], val nr: Int) {
@@ -20,9 +19,7 @@ class NearestNeighbourAlg(val distanceMatrix: Array[Array[Double]], val nr: Int)
         val ans: ListBuffer[Int] = ListBuffer(0)
         for (x <- 1 until nr) {
             val nxt = Range(1, nr).filter(x => !visited(x)).minByOption(x => distanceMatrix(currentNode)(x))
-            if (nxt.isEmpty) {
-                break
-            }
+
             visited(nxt.get) = true
             cost += distanceMatrix(currentNode)(nxt.get)
             currentNode = nxt.get

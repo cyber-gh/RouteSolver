@@ -1,5 +1,6 @@
 package repositories.auth0
 
+import akka.http.scaladsl.model.DateTime
 import com.auth0.client.auth.AuthAPI
 import com.auth0.client.mgmt.ManagementAPI
 import com.auth0.client.mgmt.filter.PageFilter
@@ -24,48 +25,57 @@ class Auth0ManagementImpl @Inject()(implicit val executionContext: ExecutionCont
 
     private var api: Option[ManagementAPI] = None
 
+    override def ensureSupplierPermissions(userId: String): Future[Boolean] =
+        for {
+            api <- getApi
+            _ <- api.roles().assignUsers(supplierRoleId, List(userId).asJava).executeAsync().asScala
+        } yield true
+
     override def listDrivers: Future[List[User]] = for {
         api <- getApi
         drivers <- api.roles().listUsers(driverRoleId, new PageFilter()).executeAsync().asScala.map(x => x.getItems.asScala.toList)
     } yield drivers
-
-    private def getApi: Future[ManagementAPI] = api match {
-        case Some(value) => Future.successful(value)
-        case None =>
-            buildMgmt().map(
-                x => {
-                    api = Some(x)
-                    x
-                }
-            )
-    }
-
-    private lazy val authApi = new AuthAPI(domain, clientId, clientSecret)
-
-    def buildMgmt(): Future[ManagementAPI] = for {
-        token <- authApi.requestToken(s"https://$domain/api/v2/").executeAsync().asScala
-        mgmt = new ManagementAPI(domain, token.getAccessToken)
-    } yield mgmt
-
-
-    //    def buildMgmt(): Future[ManagementAPI] = {
-    //
-    //        if (target == "dev" && token.nonEmpty) {
-    //            return Future {
-    //                val mgmt = new ManagementAPI(domain, token)
-    //                mgmt
-    //            }
-    //        }
-    //        return Future.failed(new Exception("Cannot obtain Auth0 Management API for production target"))
-    //    }
-
-    private def driverRoleId: String = "rol_iT25htSYLou59w6P"
 
     override def registerDriver(name: String, email: String): Future[User] = for {
         api <- getApi
         user <- api.users().create(buildUser(name, email)).executeAsync().asScala
         _ <- api.roles().assignUsers(driverRoleId, List(user.getId).asJava).executeAsync().asScala
     } yield user
+
+    private var lastGenerateTokenTime: DateTime = DateTime.now
+
+    private def getApi: Future[ManagementAPI] =
+        api match {
+            case Some(value) =>
+                if (DateTime.now.compare(lastGenerateTokenTime) < 12 * 60 * 1000) Future.successful(value)
+                else buildMgmt().map {
+                    case (x, tm) => {
+                        api = Some(x)
+                        lastGenerateTokenTime = tm
+                        x
+                    }
+                }
+            case None =>
+                buildMgmt().map {
+                    case (x, tm) => {
+                        api = Some(x)
+                        lastGenerateTokenTime = tm
+                        x
+                    }
+                }
+        }
+
+    private lazy val authApi = new AuthAPI(domain, clientId, clientSecret)
+
+    def buildMgmt(): Future[(ManagementAPI, DateTime)] = for {
+        token <- authApi.requestToken(s"https://$domain/api/v2/").executeAsync().asScala
+        mgmt = new ManagementAPI(domain, token.getAccessToken)
+        tm = DateTime.now
+    } yield (mgmt, tm)
+
+    private def driverRoleId: String = "rol_iT25htSYLou59w6P"
+
+    private def supplierRoleId: String = "rol_Rj1uY71gQls2neEL"
 
     private def buildUser(name: String, email: String): User = {
         val user = new User(usersConnection)

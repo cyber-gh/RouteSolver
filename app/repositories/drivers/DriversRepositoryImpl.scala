@@ -6,7 +6,7 @@ import database.AppDatabase
 import errors.AmbigousResult
 import models.{Driver, Vehicle}
 import repositories.auth0.Auth0Management
-import repositories.routes.LocationRepository
+import repositories.locations.LocationRepository
 import slick.lifted.TableQuery
 
 import scala.concurrent.{ExecutionContext, Future}

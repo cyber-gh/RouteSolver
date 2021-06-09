@@ -1,11 +1,11 @@
 package auth
 
+import com.google.inject.Inject
 import pdi.jwt._
 import play.api.http.HeaderNames
 import play.api.mvc._
 import services.AuthService
 
-import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
