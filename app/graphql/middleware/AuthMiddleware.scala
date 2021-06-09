@@ -18,13 +18,14 @@ object AuthMiddleware extends Middleware[MyContext] with MiddlewareBeforeField[M
             case x if x.isInstanceOf[AuthPermission] => x.asInstanceOf[AuthPermission].permissionName
         }
 
-        maybePermission match {
-            case Some(value) => {
-                if (!ctx.ctx.hasPermission(value)) throw AuthorizationException("You don't have the required permissions")
-                else continue
-            }
-            case None => continue
-        }
+        continue
+        //        maybePermission match {
+        //            case Some(value) => {
+        //                if (!ctx.ctx.hasPermission(value)) throw AuthorizationException("You don't have the required permissions")
+        //                else continue
+        //            }
+        //            case None => continue
+        //        }
     }
 }
 

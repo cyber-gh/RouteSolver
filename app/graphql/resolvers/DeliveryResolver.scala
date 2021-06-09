@@ -37,4 +37,8 @@ class DeliveryResolver @Inject()(deliveryRouteRepository: DeliveryRouteRepositor
     def addOrderByClient(routeId: String, clientId: String): Future[DeliveryOrderModel] = deliveryRouteRepository.addOrderByClient(routeId, clientId)
 
     def addOrdersByClients(routeId: String, clientIds: List[String]): Future[List[DeliveryOrderModel]] = Future.sequence(clientIds.map(it => addOrderByClient(routeId, it)))
+
+    def assignDriverToRoute(routeId: String, driverId: String): Future[Boolean] = deliveryRouteRepository.assignDriverToRoute(routeId, driverId)
+
+    def getDriverAssignedRoutes(driverId: String): Future[List[DeliveryRouteModel]] = deliveryRouteRepository.getDriverAssignedRoutes(driverId)
 }

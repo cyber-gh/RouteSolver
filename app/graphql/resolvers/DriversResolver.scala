@@ -18,4 +18,6 @@ class DriversResolver @Inject() (driversRepository: DriversRepository, implicit 
     def findDriver(idx: String): Future[Option[Driver]] = driversRepository.find(idx)
 
     def deleteDriver(idx: String): Future[Boolean] = driversRepository.delete(idx)
+
+    def updateLocation(driverId: String, lat: Double, lng: Double): Future[Boolean] = driversRepository.updateLocation(driverId, lat, lng)
 }

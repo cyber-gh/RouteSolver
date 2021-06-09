@@ -1,9 +1,8 @@
 package repositories.drivers
 
-import com.auth0.json.mgmt.users.User
 import com.google.inject.{Inject, Singleton}
 import database.AppDatabase
-import errors.AmbigousResult
+import errors.{AmbigousResult, EntityNotFound}
 import models.{Driver, Vehicle}
 import repositories.auth0.Auth0Management
 import repositories.locations.LocationRepository
@@ -15,12 +14,25 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class DriversRepositoryImpl @Inject()(val database: AppDatabase, val auth0Api: Auth0Management, val locationRepository: LocationRepository, implicit val executionContext: ExecutionContext) extends DriversRepository {
 
+    override def updateLocation(driverId: String, lat: Double, lng: Double): Future[Boolean] = for {
+        maybeDriver <- find(driverId)
+        driver <- maybeDriver match {
+            case Some(value) => Future.successful(value)
+            case None => Future.failed(EntityNotFound(s"No such driver ${driverId}"))
+        }
+        location <- locationRepository.getLocation(lat, lng)
+        newDriver = driver.copy(locationId = location.address)
+        _ <- db.run {
+            Actions.addDriver(newDriver)
+        }
+    } yield true
 
     override def create(driver: Driver): Future[Driver] = for {
         user <- auth0Api.registerDriver(driver.name, driver.email)
-        newLocationId <- locationRepository.getLocation(driver.locationId)
+        newLocationId <- locationRepository.getLocation(driver.locationId).map(x => x.address)
+
         driver <- db.run {
-            Actions.addDriver(driver.copy(id = user.getId, locationId = newLocationId.address))
+            Actions.addDriver(driver.copy(id = user.getId, locationId = newLocationId))
         }
     } yield driver
 
@@ -35,17 +47,6 @@ class DriversRepositoryImpl @Inject()(val database: AppDatabase, val auth0Api: A
             Actions.getAllDrivers
         }
     } yield drivers
-
-    private def combineDetails(users: List[User], driverDetails: List[Driver]): List[Driver] = {
-        users.map(x => {
-            val d = driverDetails.findLast(_.id == x.getId)
-            d match {
-                case Some(value) => Driver(x.getId, x.getName, x.getEmail, value.locationId, value.vehicleId, value.supplierId)
-                case None => Driver(x.getId, x.getName, x.getEmail, "", None, None)
-            }
-
-        })
-    }
 
     /**
      * Specific database profile

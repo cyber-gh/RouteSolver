@@ -24,4 +24,8 @@ trait DeliveryRouteRepository {
     def addOrder(orderForm: DeliveryOrderInputForm): Future[DeliveryOrderModel]
 
     def addOrderByClient(routeId: String, clientId: String): Future[DeliveryOrderModel]
+
+    def assignDriverToRoute(routeId: String, driverId: String): Future[Boolean]
+
+    def getDriverAssignedRoutes(driverId: String): Future[List[DeliveryRouteModel]]
 }

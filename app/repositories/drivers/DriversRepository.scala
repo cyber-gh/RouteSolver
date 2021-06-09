@@ -16,4 +16,6 @@ trait DriversRepository {
     def delete(idx: String): Future[Boolean]
 
     def assignVehicle(driverId: String, vehicle: Vehicle)
+
+    def updateLocation(driverId: String, lat: Double, lng: Double): Future[Boolean]
 }

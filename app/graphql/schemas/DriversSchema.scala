@@ -52,7 +52,7 @@ class DriversSchema @Inject()(
         ObjectTypeName("Driver"),
         ExcludeFields("supplierId", "vehicleId"),
         ReplaceField("locationId",
-            Field("location", LocationType, resolve = x => deliveryResolver.getLocation(x.value.locationId))
+            Field("location", OptionType(LocationType), resolve = x => deliveryResolver.getLocation(x.value.locationId))
         )
     )
     implicit lazy val DeliveryClientType: ObjectType[Unit, DeliveryClient] = deriveObjectType[Unit, DeliveryClient](
@@ -142,6 +142,20 @@ class DriversSchema @Inject()(
                     ctx.ctx.userDetails.userId
                 )
         ),
+
+        Field(
+            name = "updateDriverLocation",
+            fieldType = BooleanType,
+            arguments = List(
+                Argument("lat", FloatType),
+                Argument("lng", FloatType)
+            ),
+            resolve = ctx => driversResolver.updateLocation(ctx.ctx.userDetails.userId,
+                ctx.args.arg[Float]("lat").toDouble,
+                ctx.args.arg[Float]("lng").toDouble
+            )
+        ),
+
         Field(
             name = "deleteDriver",
             fieldType = BooleanType,
@@ -279,6 +293,18 @@ class DriversSchema @Inject()(
             resolve = ctx => deliveryResolver.deleteOrder(
                 ctx.args.arg[String]("orderId")
             )
+        ),
+        Field(
+            name = "assignRouteDriver",
+            fieldType = BooleanType,
+            arguments = List(
+                Argument("routeId", StringType),
+                Argument("driverId", StringType)
+            ),
+            resolve = ctx => deliveryResolver.assignDriverToRoute(
+                ctx.args.arg[String]("routeId"),
+                ctx.args.arg[String]("driverId")
+            )
         )
     )
 
@@ -296,6 +322,11 @@ class DriversSchema @Inject()(
             tags = AuthPermission("read:routes") :: Nil,
             arguments = Id :: Nil,
             resolve = ctx => deliveryResolver.getRoute(ctx.arg(Id))
+        ),
+        Field(
+            name = "routesByDriver",
+            fieldType = ListType(DeliveryRouteType),
+            resolve = ctx => deliveryResolver.getDriverAssignedRoutes(ctx.ctx.userDetails.userId)
         )
     )
     private val DeliverySolutionQueries: List[Field[MyContext, Unit]] = List(
