@@ -128,7 +128,6 @@ class AppController @Inject()(graphQL: GraphQL, cc: ControllerComponents, authSe
     }
 
     private def hasErrors(js: JsValue): Boolean = {
-        return false
         val t = js \ "errors" \ 0 \ "message"
         val msg = t.asOpt[String].getOrElse("")
         return msg == "You don't have the required permissions"
