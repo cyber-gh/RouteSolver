@@ -3,6 +3,7 @@ package repositories.solver
 import akka.http.scaladsl.model.DateTime
 import com.google.inject.Inject
 import database.AppDatabase
+import errors.EntityNotFound
 import models.VRPAlg.VRPAlg
 import models._
 import repositories.directions.DirectionsRepository
@@ -60,24 +61,32 @@ class RouteSolutionManagerImpl @Inject()(
     } yield ()
 
     override def selectSolution(routeId: String, solutionId: String): Future[Option[RouteSolution]] = for {
-        route <- db.run {
+        maybeRoute <- db.run {
             Actions.getRoute(routeId)
         }
-        solution <- getSolution(solutionId)
-        t <- if (route.nonEmpty && solution.nonEmpty) for {
-            _ <- db.run {
-                Actions.updateRouteSolution(routeId, solutionId)
-            }
-            //            _ <- setDirections(route.get, solution.get)
-        } yield ()
-        else Future.successful(None)
-    } yield solution
+        route: Future[RouteSolution] <- maybeRoute match {
+            case Some(value) => Future.successful(value)
+            case None => Future.failed(EntityNotFound("No such route"))
+        }
+
+        maybeSolution <- getSolution(solutionId)
+        solution <- maybeSolution match {
+            case Some(value) => Future.successful(value)
+            case None => Future.failed(EntityNotFound("No such solution"))
+        }
+
+        _ <- db.run {
+            Actions.updateRouteSolution(routeId, Some(solutionId))
+        }
+
+
+    } yield Some(solution)
 
     override def selectBestSolution(routeId: String): Future[Option[RouteSolution]] = for {
         solution <- getAllSolutions(routeId).map(x => x.minByOption(it => it.distance))
         sol <- solution match {
             case Some(value) => selectSolution(routeId, value.id)
-            case None => Future.successful(None)
+            case None => Future.failed(EntityNotFound("No solutions availalbe"))
         }
     } yield sol
 
@@ -137,10 +146,25 @@ class RouteSolutionManagerImpl @Inject()(
         Actions.getDetailedSolution(solutionId)
     }
 
-    override def removeSolution(solutionId: String): Future[Boolean] = db.run {
-        Actions.removeSolution(solutionId)
-    }
-
+    override def removeSolution(solutionId: String): Future[Boolean] = for {
+        maybeSolution <- getSolution(solutionId)
+        solution <- maybeSolution match {
+            case Some(value) => Future.successful(value)
+            case None => Future.failed(EntityNotFound("No such solution"))
+        }
+        maybeRoute <- db.run {
+            Actions.getRouteBySolution(solution.id)
+        }
+        _ <- maybeRoute match {
+            case Some(value) => db.run {
+                Actions.updateRouteSolution(value.id, None)
+            }
+            case None => Future.successful()
+        }
+        _ <- db.run {
+            Actions.removeSolution(solutionId)
+        }
+    } yield true
 
 
     object Actions {
@@ -183,9 +207,9 @@ class RouteSolutionManagerImpl @Inject()(
             _ <- solutionsTable.filter(_.id === solutionId).delete
         } yield true
 
-        def updateRouteSolution(routeId: String, solutionId: String): DBIO[Unit] = for {
+        def updateRouteSolution(routeId: String, solutionId: Option[String]): DBIO[Unit] = for {
             route <- routesTable.filter(_.id === routeId).result.head
-            _ <- routesTable.insertOrUpdate(route.copy(selectedSolutionId = Some(solutionId)))
+            _ <- routesTable.insertOrUpdate(route.copy(selectedSolutionId = solutionId))
         } yield ()
 
         def getSolutionLocationsOrder(solutionId: String) = for {
@@ -200,6 +224,7 @@ class RouteSolutionManagerImpl @Inject()(
 
         def getDirections(idx: String): DBIO[Option[RouteDirections]] = directionsTable.filter(_.id === idx).result.headOption
 
+        def getRouteBySolution(selectedSolutionId: String): DBIO[Option[DeliveryRouteModel]] = routesTable.filter(_.selectedSolutionId === selectedSolutionId).result.headOption
 
     }
 
