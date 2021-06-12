@@ -27,12 +27,10 @@ case class ChristofidesAlg(
         }
         val isInTree: Array[Boolean] = Range(0, nr).map(x => false).toArray
         val key: Array[Double] = Range(0, nr).map(x => Double.MaxValue).toArray //distance from parent[i]
-        val parent: Array[Int] = Range(0, nr).map(x => 0).toArray
+        val parent: Array[Int] = Range(0, nr).map(x => 0).toArray // parent of element i
 
         key(0) = 0
         var u = 0
-        var temp = 0
-        var elem = 0
         do {
             isInTree(u) = true;
             queue.remove(queue.indexOf(u))
@@ -88,9 +86,7 @@ case class ChristofidesAlg(
         for (i <- minimumTree.indices) {
             if (minimumTree(i) != i) nodes(minimumTree(i)).addChild(nodes(i))
         }
-
         val oddDegreeNodes = nodes(0).traverseOddNodes()
-
         val nOdd = oddDegreeNodes.length
         if (verbose) {
             println("Odd Degree Nodes")
@@ -100,16 +96,15 @@ case class ChristofidesAlg(
         if (nOdd < 10) {
             return bestMatch(oddDegreeNodes)
         }
-
         val edges: Array[Array[Edge]] = Range(0, nOdd)
             .map(x => Range(0, nOdd).map(y => {
-                if (oddDegreeNodes(x) != oddDegreeNodes(y)) Edge(oddDegreeNodes(x), oddDegreeNodes(y), distanceMatrix(oddDegreeNodes(x))(oddDegreeNodes(y)))
+                if (oddDegreeNodes(x) != oddDegreeNodes(y)) Edge(oddDegreeNodes(x), oddDegreeNodes(y),
+                    distanceMatrix(oddDegreeNodes(x))(oddDegreeNodes(y)))
                 else Edge(oddDegreeNodes(x), oddDegreeNodes(y), Double.MaxValue)
             }).sortBy(el => el.cost).toArray).toArray
 
         val matched = Range(0, nr).map(x => false).toArray
         val mat = Range(0, nOdd / 2).map(_ => (0, 0)).toArray
-
         var k = 0
         for (i <- 0 until nOdd) {
             for (j <- 0 until nOdd) {
@@ -123,7 +118,6 @@ case class ChristofidesAlg(
                 }
             }
         }
-
         if (verbose) {
             println("Greedy Matching")
             for (t <- mat) {
@@ -136,8 +130,6 @@ case class ChristofidesAlg(
             )
 
         }
-
-
         return mat.toList
 
     }

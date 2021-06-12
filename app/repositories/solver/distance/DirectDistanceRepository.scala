@@ -18,7 +18,7 @@ class DirectDistanceRepository @Inject() extends DistanceRepository {
                 distanceBetween(x, y)
             }).toArray
         }).toArray
-        val time = distance.map(row => row.map(x => x / averageSpeed))
+        val time = distance.map(row => row.map(x => (x / 1000) / averageSpeed * 3600))
         TimeDistanceResponse(distance, time)
     }
 

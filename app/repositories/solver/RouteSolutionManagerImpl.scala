@@ -1,6 +1,7 @@
 package repositories.solver
 
 import akka.http.scaladsl.model.DateTime
+import cats.data.OptionT
 import com.google.inject.Inject
 import database.AppDatabase
 import errors.EntityNotFound
@@ -60,27 +61,23 @@ class RouteSolutionManagerImpl @Inject()(
 
     } yield ()
 
-    override def selectSolution(routeId: String, solutionId: String): Future[Option[RouteSolution]] = for {
-        maybeRoute <- db.run {
+    override def selectSolution(routeId: String, solutionId: String): Future[Option[RouteSolution]] = (for {
+        maybeRoute <- OptionT(db.run {
             Actions.getRoute(routeId)
-        }
-        route: Future[RouteSolution] <- maybeRoute match {
-            case Some(value) => Future.successful(value)
-            case None => Future.failed(EntityNotFound("No such route"))
-        }
-
-        maybeSolution <- getSolution(solutionId)
-        solution <- maybeSolution match {
-            case Some(value) => Future.successful(value)
-            case None => Future.failed(EntityNotFound("No such solution"))
-        }
-
-        _ <- db.run {
-            Actions.updateRouteSolution(routeId, Some(solutionId))
-        }
-
-
-    } yield Some(solution)
+        })
+        //        route <- maybeRoute match {
+        //            case Some(value) => Future.successful(value)
+        //            case None => Future.failed(EntityNotFound("No such route"))
+        //        }
+        maybeSolution <- OptionT(getSolution(solutionId))
+        //        solution <- maybeSolution match {
+        //            case Some(value) => Future.successful(value)
+        //            case None => Future.failed(EntityNotFound("No such solution"))
+        //        }
+        t <- OptionT(db.run {
+            Actions.updateRouteSolution(maybeRoute.id, Some(solutionId))
+        }.map(x => Some(x)))
+    } yield maybeSolution).value
 
     override def selectBestSolution(routeId: String): Future[Option[RouteSolution]] = for {
         solution <- getAllSolutions(routeId).map(x => x.minByOption(it => it.distance))
@@ -129,7 +126,7 @@ class RouteSolutionManagerImpl @Inject()(
             fullSolution <- optimizer.optimize(startLocation, fullOrders)
 
             ordersSolution = fullSolution.orders
-            routeSolution = RouteSolution(UUID.randomUUID().toString, routeId, None, algorithm, orders.length, fullSolution.cost, 0, None, None)
+            routeSolution = RouteSolution(UUID.randomUUID().toString, routeId, None, algorithm, orders.length, fullSolution.distance, fullSolution.time, None, None)
             solutionOrders = ordersSolution.map { case (delivery, orderOf) => DeliveryOrderSolution(UUID.randomUUID().toString, routeSolution.id, delivery.id, orderOf, DateTime.now, DateTime.now + (5 * 60 * 1000)) }
         } yield (routeSolution, solutionOrders)
     }
@@ -207,10 +204,10 @@ class RouteSolutionManagerImpl @Inject()(
             _ <- solutionsTable.filter(_.id === solutionId).delete
         } yield true
 
-        def updateRouteSolution(routeId: String, solutionId: Option[String]): DBIO[Unit] = for {
+        def updateRouteSolution(routeId: String, solutionId: Option[String]): DBIO[Boolean] = for {
             route <- routesTable.filter(_.id === routeId).result.head
             _ <- routesTable.insertOrUpdate(route.copy(selectedSolutionId = solutionId))
-        } yield ()
+        } yield true
 
         def getSolutionLocationsOrder(solutionId: String) = for {
             s <- solutionOrdersTable if s.solutionId === solutionId

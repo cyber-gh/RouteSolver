@@ -36,7 +36,7 @@ class MapboxDistanceRepository @Inject()(
         val javaMatrix = ans.body().durations().asScala.toArray.map(x => x.map(_.doubleValue()))
 
         val time = javaMatrix
-        val distance = javaMatrix.map(row => row.map(x => averageSpeed * x))
+        val distance = javaMatrix.map(row => row.map(x => averageSpeed * (x / 3600) * 1000))
         TimeDistanceResponse(distance, time)
     }
 

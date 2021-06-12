@@ -25,7 +25,7 @@ class JspritOptimizer @Inject()(distanceRepository: DistanceRepository, implicit
             (ans, cost) = optimize(matrix.distances, matrix.travelTimes, locations.length)
             finalOrders = ans.zipWithIndex.map { case (o, idx) => (orders(o - 1), idx) }
             sortedOrders = finalOrders.sortBy { case (order, idx) => idx }
-            sol = OptimizeSolution(sortedOrders, cost)
+            sol = OptimizeSolution(sortedOrders, cost, (cost / 1000) / distanceRepository.averageSpeed * 3600)
         } yield sol
     }
 

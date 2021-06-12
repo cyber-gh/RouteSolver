@@ -4,6 +4,10 @@ version := "1.0"
 
 lazy val `routesolver` = (project in file(".")).enablePlugins(PlayScala)
 
+scalacOptions += "-Ypartial-unification"
+
+libraryDependencies += "org.typelevel" %% "cats-core" % "2.6.1"
+
 javaOptions in Universal ++= Seq(
     "-Dpidfile.path=/dev/null"
 )

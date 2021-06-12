@@ -176,7 +176,8 @@ class DeliveryRouteRepositoryImpl @Inject()(
         } yield isDeleted
 
         def addOrder(order: DeliveryOrderModel): DBIO[DeliveryOrderModel] = for {
-            _ <- ordersTable.insertOrUpdate(order)
+            x <- ordersTable.insertOrUpdate(order)
+
         } yield order
 
         def getOrder(orderId: String): DBIO[Option[DeliveryOrderModel]] = ordersTable.filter(_.id === orderId).result.headOption
