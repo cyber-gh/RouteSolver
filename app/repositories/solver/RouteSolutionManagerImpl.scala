@@ -76,7 +76,7 @@ class RouteSolutionManagerImpl @Inject()(
         //        }
         t <- OptionT(db.run {
             Actions.updateRouteSolution(maybeRoute.id, Some(solutionId))
-        }.map(x => Some(x)))
+        }.map(x => Option(x)))
     } yield maybeSolution).value
 
     override def selectBestSolution(routeId: String): Future[Option[RouteSolution]] = for {
