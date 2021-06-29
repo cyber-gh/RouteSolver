@@ -15,7 +15,10 @@ class DriversResolver @Inject() (driversRepository: DriversRepository, implicit 
         Driver(UUID.randomUUID().toString, name = name, email = email, locationId = address, vehicleId = null, supplierId = Option(supplierId))
     )
 
-    def findDriver(idx: String): Future[Option[Driver]] = driversRepository.find(idx)
+    def findDriver(idx: Option[String]): Future[Option[Driver]] = idx match {
+        case Some(value) => driversRepository.find(value)
+        case None => Future.successful(Option.empty)
+    }
 
     def deleteDriver(idx: String): Future[Boolean] = driversRepository.delete(idx)
 

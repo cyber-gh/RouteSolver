@@ -17,7 +17,7 @@ trait RouteSolutionManager {
 
     def removeSolution(solutionId: String): Future[Boolean]
 
-    def selectSolution(routeId: String, solutionId: String): Future[Option[RouteSolution]]
+    def selectSolution(routeId: String, solutionId: Option[String]): Future[Option[RouteSolution]]
 
     def selectBestSolution(routeId: String): Future[Option[RouteSolution]]
 

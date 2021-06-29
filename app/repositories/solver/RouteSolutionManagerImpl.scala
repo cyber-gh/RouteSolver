@@ -61,28 +61,20 @@ class RouteSolutionManagerImpl @Inject()(
 
     } yield ()
 
-    override def selectSolution(routeId: String, solutionId: String): Future[Option[RouteSolution]] = (for {
+    override def selectSolution(routeId: String, solutionId: Option[String]): Future[Option[RouteSolution]] = (for {
         maybeRoute <- OptionT(db.run {
             Actions.getRoute(routeId)
         })
-        //        route <- maybeRoute match {
-        //            case Some(value) => Future.successful(value)
-        //            case None => Future.failed(EntityNotFound("No such route"))
-        //        }
         maybeSolution <- OptionT(getSolution(solutionId))
-        //        solution <- maybeSolution match {
-        //            case Some(value) => Future.successful(value)
-        //            case None => Future.failed(EntityNotFound("No such solution"))
-        //        }
         t <- OptionT(db.run {
-            Actions.updateRouteSolution(maybeRoute.id, Some(solutionId))
+            Actions.updateRouteSolution(maybeRoute.id, solutionId)
         }.map(x => Option(x)))
     } yield maybeSolution).value
 
     override def selectBestSolution(routeId: String): Future[Option[RouteSolution]] = for {
         solution <- getAllSolutions(routeId).map(x => x.minByOption(it => it.distance))
         sol <- solution match {
-            case Some(value) => selectSolution(routeId, value.id)
+            case Some(value) => selectSolution(routeId, Option(value.id))
             case None => Future.failed(EntityNotFound("No solutions availalbe"))
         }
     } yield sol
@@ -126,7 +118,7 @@ class RouteSolutionManagerImpl @Inject()(
             fullSolution <- optimizer.optimize(startLocation, fullOrders)
 
             ordersSolution = fullSolution.orders
-            routeSolution = RouteSolution(UUID.randomUUID().toString, routeId, None, algorithm, orders.length, fullSolution.distance, fullSolution.time, None, None)
+            routeSolution = RouteSolution(UUID.randomUUID().toString, routeId, None, algorithm, fullSolution.orders.length, fullSolution.distance, fullSolution.time, None, None)
             solutionOrders = ordersSolution.map { case (delivery, orderOf) => DeliveryOrderSolution(UUID.randomUUID().toString, routeSolution.id, delivery.id, orderOf, DateTime.now, DateTime.now + (5 * 60 * 1000)) }
         } yield (routeSolution, solutionOrders)
     }
@@ -137,6 +129,11 @@ class RouteSolutionManagerImpl @Inject()(
 
     override def getSolution(idx: String): Future[Option[RouteSolution]] = db.run {
         Actions.getSolution(idx)
+    }
+
+    def getSolution(idx: Option[String]): Future[Option[RouteSolution]] = idx match {
+        case Some(value) => getSolution(value)
+        case None => Future.successful(Option.empty)
     }
 
     override def getDeliveryOrders(solutionId: String): Future[List[DeliveryOrderSolution]] = db.run {

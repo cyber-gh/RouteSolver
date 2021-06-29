@@ -23,7 +23,7 @@ class DriversRepositoryImpl @Inject()(val database: AppDatabase, val auth0Api: A
         location <- locationRepository.getLocation(lat, lng)
         newDriver = driver.copy(locationId = location.address)
         _ <- db.run {
-            Actions.addDriver(newDriver)
+            Actions.updateDriverLocation(newDriver)
         }
     } yield true
 
@@ -90,9 +90,17 @@ class DriversRepositoryImpl @Inject()(val database: AppDatabase, val auth0Api: A
             isDeleted = if (maybeDelete == 1) true else false
         } yield isDeleted
 
+
+        //rowsAffected <- reviews.filter(r => r.critic === critic && r.title === title).
+        //                    map(_.rating).update(rating)
+
+        def updateDriverLocation(driver: Driver): DBIO[Driver] = for {
+            t <- driversTable.filter(r => r.id === driver.id).map(_.locationId).update(driver.locationId)
+        } yield driver
+
         def addDriver(driver: Driver): DBIO[Driver] = for {
             insertedDriver <- driversTable.insertOrUpdate(driver).map(_ => driver)
-        } yield insertedDriver
+        } yield driver
 
         def insertAndLinkVehicle(driverId: String, vehicle: Vehicle) = for {
             _ <- vehicleTable.insertOrUpdate(vehicle)

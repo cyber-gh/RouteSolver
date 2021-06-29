@@ -22,7 +22,7 @@ class DeliverySolutionResolver @Inject()(repo: RouteSolutionManager) {
 
     def deleteSolution(idx: String): Future[Boolean] = repo.removeSolution(idx)
 
-    def setRouteSolution(routeId: String, solutionId: String): Future[Option[RouteSolution]] = repo.selectSolution(routeId, solutionId)
+    def setRouteSolution(routeId: String, solutionId: Option[String]): Future[Option[RouteSolution]] = repo.selectSolution(routeId, solutionId)
 
     def setBestSolution(routeId: String): Future[Option[RouteSolution]] = repo.selectBestSolution(routeId)
 

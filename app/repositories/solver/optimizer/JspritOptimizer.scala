@@ -20,20 +20,46 @@ class JspritOptimizer @Inject()(distanceRepository: DistanceRepository, implicit
 
     override def optimize(start: Location, orders: List[DeliveryOrder]): Future[OptimizeSolution] = {
         val locations = List(start) ++ orders.map(_.location)
+        val weightConstraints = orders.map(x => x.weight.getOrElse(0.0))
+        val volumeConstraints = orders.map(x => x.volume.getOrElse(0.0))
+        val timeConstraints = orders.map(x => extractTimeWindow(x.startTime, x.endTime))
         return for {
             matrix <- distanceRepository.getDistanceMatrix(locations)
-            (ans, cost) = optimize(matrix.distances, matrix.travelTimes, locations.length)
+            (ans, cost) = optimize(matrix.distances, matrix.travelTimes, locations.length, weightConstraints, volumeConstraints, timeConstraints)
             finalOrders = ans.zipWithIndex.map { case (o, idx) => (orders(o - 1), idx) }
             sortedOrders = finalOrders.sortBy { case (order, idx) => idx }
             sol = OptimizeSolution(sortedOrders, cost, (cost / 1000) / distanceRepository.averageSpeed * 3600)
         } yield sol
     }
 
-    private def optimize(distances: Array[Array[Double]], travelTimes: Array[Array[Double]], nr: Int): (List[Int], Double) = {
+    private def extractTime(tm: Option[String], default: String = "00:00"): Double = {
+        val st = tm.getOrElse(default)
+        val startH = st.split(":")(0).toInt
+        val startM = st.split(":")(1).toInt
+        val start = startH * 3600 + startM * 60
+
+
+        return start
+    }
+
+    private def extractTimeWindow(startTime: Option[String], endTime: Option[String]): (Double, Double) = {
+        return (extractTime(startTime, "00:00"), extractTime(endTime, "23:59"))
+    }
+
+    private def optimize(distances: Array[Array[Double]],
+                         travelTimes: Array[Array[Double]],
+                         nr: Int,
+                         weightConstraints: List[Double] = List(),
+                         volumeConstraints: List[Double] = List(),
+                         timeWindowConstraints: List[(Double, Double)] = List()
+                        ): (List[Int], Double) = {
         import com.graphhopper.jsprit.core.problem.vehicle.{VehicleImpl, VehicleTypeImpl}
         val typeBuilder = VehicleTypeImpl.Builder.newInstance("vehicle-type")
         typeBuilder.setCostPerDistance(1.0)
         typeBuilder.setCostPerTransportTime(0.0)
+        typeBuilder.addCapacityDimension(0, 200) // 0 is weight
+        typeBuilder.addCapacityDimension(1, 200) // 1 is volume
+
         val bigType = typeBuilder.build
 
         val vehicleBuilder = VehicleImpl.Builder.newInstance("vehicle")
@@ -50,6 +76,7 @@ class JspritOptimizer @Inject()(distanceRepository: DistanceRepository, implicit
         for (x <- 0 until nr) {
             for (y <- 0 until nr) {
                 matrixBuilder.addTransportDistance(x, y, distances(x)(y))
+                matrixBuilder.addTransportTime(x, y, travelTimes(x)(y))
             }
         }
         vrpBuilder.setRoutingCost(matrixBuilder.build())
@@ -57,7 +84,11 @@ class JspritOptimizer @Inject()(distanceRepository: DistanceRepository, implicit
 
         for (t <- 1 until nr) {
             val delivery = Service.Builder.newInstance(t.toString)
-                .setLocation(JLocation.Builder.newInstance().setIndex(t).build()).build()
+                .setLocation(JLocation.Builder.newInstance().setIndex(t).build())
+                .addSizeDimension(0, weightConstraints(t - 1).toInt)
+                .addSizeDimension(1, volumeConstraints(t - 1).toInt)
+                .addTimeWindow(timeWindowConstraints(t - 1)._1, timeWindowConstraints(t - 1)._2)
+                .build()
             vrpBuilder.addJob(delivery)
         }
 

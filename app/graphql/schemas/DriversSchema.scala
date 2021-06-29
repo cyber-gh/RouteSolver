@@ -30,6 +30,7 @@ class DriversSchema @Inject()(
     implicit val orderInputFormat = jsonFormat8(DeliveryOrderInputForm)
     val DeliveryOrderInputType = deriveInputObjectType[DeliveryOrderInputForm]()
     val DeliveryOrderInputArg = Argument("order", DeliveryOrderInputType)
+    val OptionSolutionId = Argument("solutionId", OptionInputType(StringType))
 
     implicit val GraphQLDateTime = ScalarType[DateTime]( //1
         "DateTime", //2
@@ -78,7 +79,11 @@ class DriversSchema @Inject()(
             Field("orders", ListType(DeliveryOrderType),
                 resolve = c => deliveryResolver.getOrders(c.value.id)),
             Field("solutions", ListType(RouteSolutionType),
-                resolve = c => deliverySolutionResolver.getSolutions(c.value.id))
+                resolve = c => deliverySolutionResolver.getSolutions(c.value.id)),
+            Field("selectedDriver", OptionType(DriverType),
+                resolve = c => driversResolver.findDriver(c.value.selectedDriverId)),
+            Field("nrOrders", IntType,
+                resolve = c => deliveryResolver.getOrdersNr(c.value.id))
         ),
         ReplaceField("startLocationId",
             Field("startLocation", LocationType, resolve = it => deliveryResolver.getLocation(it.value.startLocationId))
@@ -151,8 +156,8 @@ class DriversSchema @Inject()(
                 Argument("lng", FloatType)
             ),
             resolve = ctx => driversResolver.updateLocation(ctx.ctx.userDetails.userId,
-                ctx.args.arg[Float]("lat").toDouble,
-                ctx.args.arg[Float]("lng").toDouble
+                ctx.args.arg[Double]("lat"),
+                ctx.args.arg[Double]("lng")
             )
         ),
 
@@ -189,7 +194,9 @@ class DriversSchema @Inject()(
             tags = AuthPermission("read:drivers") :: Nil,
             arguments = List(Argument("id", StringType)),
             resolve =
-                sangriaContext => driversResolver.findDriver(sangriaContext.args.arg[String]("id"))
+                sangriaContext => driversResolver.findDriver(
+                    Option(sangriaContext.args.arg[String]("id"))
+                )
         )
     )
     private val ClientsMutations: List[Field[MyContext, Unit]] = List(
@@ -281,7 +288,7 @@ class DriversSchema @Inject()(
             ),
             resolve = ctx => deliveryResolver.addOrdersByClients(
                 ctx.args.arg[String]("routeId"),
-                ctx.args.arg[List[String]]("clientIds")
+                ctx.args.arg[Vector[String]]("clientIds").toList
             )
         ),
 
@@ -369,12 +376,12 @@ class DriversSchema @Inject()(
             tags = AuthPermission("modify:routes") :: Nil,
             arguments = List(
                 Argument("routeId", StringType),
-                Argument("solutionId", StringType)
+                OptionSolutionId
             ),
             resolve =
                 ctx => deliverySolutionResolver.setRouteSolution(
                     ctx.args.arg[String]("routeId"),
-                    ctx.args.arg[String]("solutionId")
+                    ctx.arg(OptionSolutionId)
                 )
         ),
 
