@@ -65,8 +65,9 @@ libraryDependencies ++= Seq(
     "com.graphhopper" % "jsprit-core" % "1.9.0-beta.4"
 )
 
-unmanagedResourceDirectories in Test <+= baseDirectory(_ / "target/web/public/test")
-
+unmanagedResourceDirectories in Test += {
+    baseDirectory.value / "target/web/public/test"
+}
 dockerBaseImage := "openjdk:11"
 packageName in Docker := "route-solver-backend"
 version in Docker := "latest"

@@ -12,6 +12,8 @@ class AuthService @Inject()(config: Configuration) {
     implicit private val clock: Clock = Clock.systemUTC
 
     private val jwtRegex = """(.+?)\.(.+?)\.(.+?)""".r
+
+
     private val splitToken = (jwt: String) => jwt match {
         case jwtRegex(header, body, sig) => Success((header, body, sig))
         case _ => Failure(new Exception("Token does not match the correct pattern"))
@@ -27,7 +29,7 @@ class AuthService @Inject()(config: Configuration) {
         (splitToken andThen decodeElements) (token) flatMap {
             case (header, _, _) =>
                 val jwtHeader = JwtJson.parseHeader(header) // extract the header
-                val jwkProvider = new UrlJwkProvider(s"https://$domain")
+                val jwkProvider = new UrlJwkProvider(s"$domain")
 
                 // Use jwkProvider to load the JWKS data and return the JWK
                 jwtHeader.keyId.map { k =>
@@ -41,19 +43,25 @@ class AuthService @Inject()(config: Configuration) {
             Failure(new Exception("The JWT did not pass validation"))
         }
 
-    def validateJwt(token: String): Try[JwtClaim] = for {
-        jwk <- getJwk(token)
-        claims <- JwtJson.decode(token, jwk.getPublicKey, Seq(JwtAlgorithm.RS256))
-        _ <- validateClaims(claims)
-    } yield claims
+    def validateJwt(token: String): Try[JwtClaim] = {
+        val result = for {
+            jwk <- getJwk(token)
+            claims <- JwtJson.decode(token, jwk.getPublicKey, Seq(JwtAlgorithm.RS256))
+            _ <- validateClaims(claims)
+        } yield claims
+
+        result.recover {
+            case e: Throwable => throw new Exception(s"JWT validation failed ${e.getLocalizedMessage} stacktrace -  ${e.getStackTrace.mkString("Array(", ",\n ", ")")}", e)
+        }
+    }
 
     // Your Auth0 audience, read from configuration
-    private def audience = config.get[String]("auth0.audience")
-//    private def audience = scala.util.Properties.envOrElse("AUTH0_AUDIENCE", "")
+//    private def audience = config.get[String]("auth0.audience")
+    private def audience = scala.util.Properties.envOrElse("AUTH0_AUDIENCE", "")
 
     private def issuer = s"https://$domain/"
 
     // Your Auth0 domain, read from configuration
-    private def domain = config.get[String]("auth0.domain")
-    //    private def domain = scala.util.Properties.envOrElse("AUTH0_DOMAIN", "")
+//    private def domain = config.get[String]("auth0.domain")
+        private def domain = scala.util.Properties.envOrElse("AUTH0_DOMAIN", "")
 }
