@@ -32,8 +32,11 @@ ENV APPLICATION_SECRET=abcdefghijk
 COPY . /root/app/
 WORKDIR /root/app
 
-RUN sbt compile
+RUN sbt dist
+
+RUN cp target/universal/routesolver-1.0.zip .
+RUN unzip routesolver-1.0.zip
 
 EXPOSE 9000
 
-CMD ["sbt", "start"]
+CMD ["./routesolver-1.0/bin/routesolver"]
