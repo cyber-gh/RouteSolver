@@ -15,7 +15,7 @@ class Auth0ManagementImpl @Inject()(implicit val executionContext: ExecutionCont
 
     private val target = scala.util.Properties.envOrElse("TARGET", "dev")
 
-    private val domain = scala.util.Properties.envOrElse("AUTH0_DOMAIN", "")
+    private val domain = scala.util.Properties.envOrElse("AUTH0_MANAGEMENT_DOMAIN", "")
     private val clientId = scala.util.Properties.envOrElse("AUTH0_CLIENT_ID", "")
     private val clientSecret = scala.util.Properties.envOrElse("AUTH0_CLIENT_SECRET", "")
 
