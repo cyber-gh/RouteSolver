@@ -1,6 +1,5 @@
 package repositories.auth0
 
-import akka.http.scaladsl.model.DateTime
 import com.auth0.client.auth.AuthAPI
 import com.auth0.client.mgmt.ManagementAPI
 import com.auth0.client.mgmt.filter.PageFilter
@@ -10,6 +9,8 @@ import com.google.inject.Inject
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.FutureConverters._
+import org.joda.time.{DateTime, Minutes}
+
 
 class Auth0ManagementImpl @Inject()(implicit val executionContext: ExecutionContext) extends Auth0Management {
 
@@ -47,12 +48,14 @@ class Auth0ManagementImpl @Inject()(implicit val executionContext: ExecutionCont
     private def getApi: Future[ManagementAPI] =
         api match {
             case Some(value) =>
-                if (DateTime.now.compare(lastGenerateTokenTime) < 12 * 60 * 1000) Future.successful(value)
-                else buildMgmt().map {
-                    case (x, tm) => {
-                        api = Some(x)
-                        lastGenerateTokenTime = tm
-                        x
+                if (Minutes.minutesBetween(lastGenerateTokenTime, DateTime.now).getMinutes < 12)  Future.successful(value)
+                else {
+                    buildMgmt().map {
+                        case (x, tm) => {
+                            api = Some(x)
+                            lastGenerateTokenTime = tm
+                            x
+                        }
                     }
                 }
             case None =>

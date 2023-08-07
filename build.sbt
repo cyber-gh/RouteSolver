@@ -65,6 +65,9 @@ libraryDependencies ++= Seq(
     "com.graphhopper" % "jsprit-core" % "1.9.0-beta.4"
 )
 
+libraryDependencies += "joda-time" % "joda-time" % "2.10.13"
+
+
 unmanagedResourceDirectories in Test += {
     baseDirectory.value / "target/web/public/test"
 }
